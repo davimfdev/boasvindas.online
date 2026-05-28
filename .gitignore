@@ -1,0 +1,8 @@
+CLAUDE.local.md
+node_modules
+.next
+.env.local
+.env
+*.log
+.turbo
+dist
