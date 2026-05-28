@@ -47,6 +47,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
+    // Postgres unique violation (concurrent registration race)
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: string }).code === '23505') {
+      return NextResponse.json(
+        { error: { code: 'EMAIL_EXISTS', message: 'Email já cadastrado' } },
+        { status: 409 }
+      )
+    }
     return NextResponse.json({ error: { code: 'INTERNAL' } }, { status: 500 })
   }
 }
