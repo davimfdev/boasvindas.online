@@ -8,19 +8,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session?.user?.id) redirect('/login')
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/app" className="font-heading text-lg font-semibold">
-            boasvindas<span className="text-[var(--accent)]">.online</span>
+    <div className="min-h-screen bg-[#f6f6f3] font-grotesk">
+      <header className="sticky top-0 z-30 border-b border-black/5 bg-[#fdfdfb]/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
+          <Link href="/app" className="font-display text-lg font-extrabold tracking-tight text-[#0a0a0a]">
+            boasvindas<span className="text-[#0d9488]">.</span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">{session.user.name}</span>
+            <span className="hidden text-sm text-black/50 sm:inline">{session.user.name}</span>
             <LogoutButton />
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-5xl px-5 py-10">{children}</main>
     </div>
   )
 }
