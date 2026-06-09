@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { NewPageDialog } from './_components/NewPageDialog'
 import { PublishToggle } from './_components/PublishToggle'
+import { EditPageDialog } from './_components/EditPageDialog'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -47,8 +48,9 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <span className="block truncate font-mono text-sm text-muted-foreground">/{page.slug}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <PublishToggle pageId={page.id} published={page.status === 'published'} />
+                  <EditPageDialog page={page} />
                   <Button variant="outline" size="sm" render={<Link href={`/${page.slug}`} target="_blank" />}>
                     <ExternalLink className="size-4" />
                     Ver
