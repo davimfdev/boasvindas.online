@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <aside className="grain mesh-dark relative hidden overflow-hidden lg:block">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity contrast-125"
-          style={{ backgroundImage: 'url(https://picsum.photos/seed/host-welcome/1200/1600)' }}
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80)' }}
         />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.5)_80%)]" />
         <blockquote className="font-display absolute bottom-16 left-12 right-12 text-balance text-3xl font-bold leading-tight text-white">
