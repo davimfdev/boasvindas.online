@@ -1,8 +1,38 @@
-CLAUDE.local.md
+# Dependencies
 node_modules
+.pnpm-store
+
+# Build output
 .next
-.env.local
-.env
-*.log
-.turbo
 dist
+.turbo
+*.tsbuildinfo
+next-env.d.ts
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Netlify
+.netlify
+
+# Editors
+.idea
+.vscode
+
+# Claude — machine-local only
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Generated tooling output (graphify knowledge graph)
+graphify-out/
+.claude/graphify-out/
+
+# OS / junk
+.DS_Store
+Thumbs.db
+nul
