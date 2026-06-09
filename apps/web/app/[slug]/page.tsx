@@ -5,6 +5,8 @@ import { db } from '@/lib/db'
 import { pages } from '@/lib/db/schema'
 import { GuestSite } from './_components/GuestSite'
 
+export const revalidate = 60
+
 const inter = Inter({ subsets: ['latin'], variable: '--font-guest-sans' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-guest-serif' })
 
@@ -28,9 +30,27 @@ export default async function GuestPage({ params }: { params: Promise<{ slug: st
   const page = await getPage(slug)
   if (!page) notFound()
 
+  if (page.status !== 'published') {
+    return (
+      <div className={`${inter.variable} ${playfair.variable}`}>
+        <ComingSoon title={page.title} />
+      </div>
+    )
+  }
+
   return (
     <div className={`${inter.variable} ${playfair.variable}`}>
       <GuestSite title={page.title} whatsapp={page.whatsapp} />
     </div>
+  )
+}
+
+function ComingSoon({ title }: { title: string }) {
+  return (
+    <main className="guest-site min-h-screen flex flex-col items-center justify-center gap-4 bg-[#f0fdfa] text-[#134e4a] px-6 text-center">
+      <span className="bg-[#fbbf24]/20 text-[#0d9488] text-[10px] px-3 py-1 rounded-full font-black tracking-widest uppercase">Em breve</span>
+      <h1 className="font-serif font-bold text-3xl text-[#0d9488]">{title}</h1>
+      <p className="text-sm text-gray-500 max-w-sm">Esta página de boas-vindas ainda está sendo preparada pelo anfitrião. Volte em breve!</p>
+    </main>
   )
 }
