@@ -26,16 +26,16 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
 
   return (
     <div className="animate-fadeIn">
-      <div className="bg-[#0d9488] text-white px-6 pt-6 pb-12 rounded-b-[50px] shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#fbbf24]/20 rounded-full blur-3xl"></div>
+      <div className="bg-gaccent text-white px-6 pt-6 pb-12 rounded-b-[50px] shadow-2xl relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-gsecondary/20 rounded-full blur-3xl"></div>
 
         <div className="flex justify-between items-center mb-8 relative z-10">
           <div className="pt-2">
             <div className="flex items-center gap-2 mb-1">
-              <span className="bg-[#fbbf24]/30 text-white text-[9px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-white/20">APTO 101</span>
+              <span className="bg-gsecondary/30 text-white text-[9px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-white/20">APTO 101</span>
             </div>
             <h2 className="text-xl text-white/90 font-medium tracking-tight">Seja bem-vindo!</h2>
-            <p className="text-4xl font-serif font-bold mt-1 text-[#fbbf24]">{title}</p>
+            <p className="text-4xl font-serif font-bold mt-1 text-gsecondary">{title}</p>
           </div>
           <div className="bg-white p-1 rounded-3xl shadow-lg flex items-center justify-center aspect-square w-20 h-20 overflow-hidden">
             <GuestLogo className="w-full h-full" />
@@ -47,7 +47,7 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
             onClick={onOpenSearch}
             className="w-full bg-white/20 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3 text-white border border-white/30 hover:bg-white/30 transition-all text-left shadow-lg group"
           >
-            <Search size={22} className="text-[#fbbf24] group-hover:scale-110 transition-transform" />
+            <Search size={22} className="text-gsecondary group-hover:scale-110 transition-transform" />
             <span className="text-white/80 font-medium">O que você está procurando?</span>
           </button>
         </div>
@@ -55,7 +55,7 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide relative z-10">
           <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl min-w-[150px] border border-white/20">
             <div className="flex items-center gap-2 mb-1">
-              <Calendar size={14} className="text-[#fbbf24]" />
+              <Calendar size={14} className="text-gsecondary" />
               <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Data de hoje</span>
             </div>
             <p className="text-xs font-semibold capitalize">{today}</p>
@@ -76,18 +76,18 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full bg-white p-6 rounded-3xl shadow-xl flex items-center justify-between border border-[#0d9488]/10 active:scale-[0.98] transition-all no-underline"
+            className="w-full bg-white p-6 rounded-3xl shadow-xl flex items-center justify-between border border-gaccent/10 active:scale-[0.98] transition-all no-underline"
           >
             <div className="flex items-center gap-4">
               <div className="bg-[#25D366] text-white p-4 rounded-2xl shadow-lg">
                 <MessageCircle size={28} />
               </div>
               <div className="text-left">
-                <p className="font-bold text-lg text-[#0d9488]">Dúvidas? Fale Conosco</p>
+                <p className="font-bold text-lg text-gaccent">Dúvidas? Fale Conosco</p>
                 <p className="text-sm text-gray-500">Estamos prontos para ajudar</p>
               </div>
             </div>
-            <div className="bg-[#0d9488]/5 p-2 rounded-full text-[#0d9488]">
+            <div className="bg-gaccent/5 p-2 rounded-full text-gaccent">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             </div>
           </a>
@@ -101,17 +101,17 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
             onClick={() => onNavigate(item.id)}
             className="flex flex-col items-center justify-center gap-3 p-4 bg-white rounded-3xl shadow-sm hover:shadow-md border border-gray-100 transition-all active:scale-[0.98] text-center group min-w-[130px] shrink-0 h-32"
           >
-            <div className="bg-[#f0fdfa] text-[#0d9488] p-3 rounded-2xl group-hover:bg-[#fbbf24] group-hover:text-white transition-colors duration-300">
+            <div className="bg-gbg text-gaccent p-3 rounded-2xl group-hover:bg-gsecondary group-hover:text-white transition-colors duration-300">
               {React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 24 })}
             </div>
-            <h3 className="font-bold text-[11px] text-[#0d9488] leading-tight uppercase tracking-wider">{item.title}</h3>
+            <h3 className="font-bold text-[11px] text-gaccent leading-tight uppercase tracking-wider">{item.title}</h3>
           </button>
         ))}
       </div>
 
       <div className="px-6 pb-14">
         <div className="bg-white p-5 rounded-2xl flex items-center gap-4 border border-gray-100 shadow-sm">
-          <div className="bg-[#0d9488]/5 p-3 rounded-xl text-[#0d9488]">
+          <div className="bg-gaccent/5 p-3 rounded-xl text-gaccent">
             <MapPin size={20} />
           </div>
           <div>

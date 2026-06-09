@@ -80,6 +80,11 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-gaccent: var(--g-accent);
+  --color-gaccent-strong: var(--g-accent-strong);
+  --color-gsecondary: var(--g-secondary);
+  --color-gbg: var(--g-bg);
+  --color-gsurface: var(--g-surface);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -137,10 +142,27 @@
 
 /* Guest landing page — scoped visual world (ported from apartamento-x demo) */
 .guest-site {
+  /* Modern theme (default): teal + amber, Inter headings */
+  --g-accent: #0d9488;
+  --g-accent-strong: #134e4a;
+  --g-secondary: #fbbf24;
+  --g-bg: #f0fdfa;
+  --g-surface: #f0fdfa;
+  --g-font-heading: var(--font-guest-sans);
+
   font-family: var(--font-guest-sans), sans-serif;
 }
+.guest-site[data-theme='rustic'] {
+  /* Rustic theme: wood/earth + ochre, Playfair headings */
+  --g-accent: #5d4017;
+  --g-accent-strong: #3d2b10;
+  --g-secondary: #d99a2b;
+  --g-bg: #faf6f0;
+  --g-surface: #fcfaf7;
+  --g-font-heading: var(--font-guest-serif);
+}
 .guest-site :is(h1, h2, h3, .font-serif) {
-  font-family: var(--font-guest-serif), serif;
+  font-family: var(--g-font-heading), serif;
 }
 
 .guest-site .animate-fadeIn {

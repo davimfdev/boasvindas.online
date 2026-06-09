@@ -18,8 +18,8 @@ import {
 import { generateSlug } from '@/lib/utils'
 
 const THEMES = [
-  { value: 'modern', label: 'Modern', hint: 'Clean, Inter, tons de teal' },
-  { value: 'rustic', label: 'Rustic', hint: 'Playfair, paleta terra/madeira' },
+  { value: 'modern', label: 'Modern', hint: 'Clean, Inter, tons de teal', swatch: ['#0d9488', '#fbbf24'] },
+  { value: 'rustic', label: 'Rustic', hint: 'Playfair, paleta terra/madeira', swatch: ['#5d4017', '#d99a2b'] },
 ] as const
 
 export function NewPageDialog() {
@@ -124,6 +124,11 @@ export function NewPageDialog() {
                       onChange={() => setTheme(t.value)}
                     />
                     {t.label}
+                    <span className="ml-auto flex gap-1" aria-hidden>
+                      {t.swatch.map((c) => (
+                        <span key={c} className="size-4 rounded-full border border-black/10" style={{ backgroundColor: c }} />
+                      ))}
+                    </span>
                   </span>
                   <span className="text-xs text-muted-foreground">{t.hint}</span>
                 </label>

@@ -10,7 +10,7 @@ export function CheckIn() {
     <div className="p-6 animate-fadeIn space-y-6">
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 flex flex-col gap-4">
         <div className="flex justify-between items-center border-b pb-4 border-gray-50">
-          <div className="flex items-center gap-2 text-[#0d9488]">
+          <div className="flex items-center gap-2 text-gaccent">
             <Clock size={20} />
             <span className="font-bold">Horários</span>
           </div>
@@ -29,12 +29,12 @@ export function CheckIn() {
       </div>
 
       <section className="space-y-4">
-        <h3 className="text-xl font-bold font-serif text-[#0d9488] flex items-center gap-2">
+        <h3 className="text-xl font-bold font-serif text-gaccent flex items-center gap-2">
           <Smartphone size={24} />
           Fechadura Inteligente
         </h3>
 
-        <div className="bg-[#0d9488] text-white p-6 rounded-2xl shadow-lg space-y-4">
+        <div className="bg-gaccent text-white p-6 rounded-2xl shadow-lg space-y-4">
           <p className="text-sm opacity-90">O acesso ao apartamento é feito por senha de 7 dígitos:</p>
 
           <div className="bg-white/10 p-4 rounded-xl border border-white/20">
@@ -65,7 +65,7 @@ export function CheckIn() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 italic">
           <h4 className="font-bold text-gray-800 mb-2 not-italic">Unidade Designada</h4>
-          <p className="text-sm text-[#0d9488] font-bold">Apartamento 101</p>
+          <p className="text-sm text-gaccent font-bold">Apartamento 101</p>
           <p className="text-xs text-gray-500 mt-1">Localizado no Edifício Parque do Sol</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
