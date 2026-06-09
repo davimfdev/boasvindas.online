@@ -177,15 +177,15 @@
 
 /* Guest landing page — scoped visual world (ported from apartamento-x demo) */
 .guest-site {
-  /* Modern theme (default): teal + amber, Inter headings */
+  /* Modern theme (default): teal + amber, Cabinet Grotesk headings */
   --g-accent: #0d9488;
   --g-accent-strong: #134e4a;
   --g-secondary: #fbbf24;
   --g-bg: #f0fdfa;
   --g-surface: #f0fdfa;
-  --g-font-heading: var(--font-guest-sans);
+  --g-font-heading: 'Cabinet Grotesk';
 
-  font-family: var(--font-guest-sans), sans-serif;
+  font-family: 'General Sans', sans-serif;
 }
 .guest-site[data-theme='rustic'] {
   /* Rustic theme: wood/earth + ochre, Playfair headings */
@@ -198,6 +198,7 @@
 }
 .guest-site :is(h1, h2, h3, .font-serif) {
   font-family: var(--g-font-heading), serif;
+  letter-spacing: -0.01em;
 }
 
 .guest-site .animate-fadeIn {

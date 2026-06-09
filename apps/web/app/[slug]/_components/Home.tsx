@@ -27,6 +27,11 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
   return (
     <div className="animate-fadeIn">
       <div className="bg-gaccent text-white px-6 pt-6 pb-12 rounded-b-[50px] shadow-2xl relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-luminosity"
+          style={{ backgroundImage: 'url(https://picsum.photos/seed/welcome-suite/1200/800)' }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,transparent_0%,rgba(0,0,0,0.35)_90%)]" />
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-gsecondary/20 rounded-full blur-3xl"></div>
 
         <div className="flex justify-between items-center mb-8 relative z-10">
@@ -35,7 +40,7 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
               <span className="bg-gsecondary/30 text-white text-[9px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-white/20">APTO 101</span>
             </div>
             <h2 className="text-xl text-white/90 font-medium tracking-tight">Seja bem-vindo!</h2>
-            <p className="text-4xl font-serif font-bold mt-1 text-gsecondary">{title}</p>
+            <p className="text-4xl sm:text-5xl font-serif font-bold mt-1 text-gsecondary leading-[1.05]">{title}</p>
           </div>
           <div className="bg-white p-1 rounded-3xl shadow-lg flex items-center justify-center aspect-square w-20 h-20 overflow-hidden">
             <GuestLogo className="w-full h-full" />
@@ -99,7 +104,7 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
-            className="flex flex-col items-center justify-center gap-3 p-4 bg-white rounded-3xl shadow-sm hover:shadow-md border border-gray-100 transition-all active:scale-[0.98] text-center group min-w-[130px] shrink-0 h-32"
+            className="flex flex-col items-center justify-center gap-3 p-4 bg-white rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 border border-gray-100 transition-all duration-300 active:scale-[0.98] text-center group min-w-[130px] shrink-0 h-32"
           >
             <div className="bg-gbg text-gaccent p-3 rounded-2xl group-hover:bg-gsecondary group-hover:text-white transition-colors duration-300">
               {React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 24 })}
