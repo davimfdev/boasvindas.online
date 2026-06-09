@@ -134,3 +134,41 @@
     @apply font-sans;
   }
 }
+
+/* Guest landing page — scoped visual world (ported from apartamento-x demo) */
+.guest-site {
+  font-family: var(--font-guest-sans), sans-serif;
+}
+.guest-site :is(h1, h2, h3, .font-serif) {
+  font-family: var(--font-guest-serif), serif;
+}
+
+.guest-site .animate-fadeIn {
+  animation: guest-fadeIn 0.5s ease-out forwards;
+}
+.guest-site .animate-slideInRight {
+  animation: guest-slideInRight 0.3s ease-out forwards;
+}
+.guest-site .animate-slideUp {
+  animation: guest-slideUp 0.4s ease-out forwards;
+}
+.guest-site .scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.guest-site .scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes guest-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes guest-slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes guest-slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
