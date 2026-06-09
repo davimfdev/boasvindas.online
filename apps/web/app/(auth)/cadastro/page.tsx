@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function CadastroPage() {
   const router = useRouter()
@@ -40,38 +39,34 @@ export default function CadastroPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Criar conta</CardTitle>
-        <CardDescription>Comece a criar suas páginas de boas-vindas</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="name" required minLength={2} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pwd">Senha</Label>
-            <Input id="pwd" name="pwd" type="password" required minLength={8} />
-            <p className="text-xs text-muted-foreground">Mínimo 8 caracteres</p>
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Criando conta…' : 'Criar conta'}
-          </Button>
-          <p className="text-sm text-center text-muted-foreground">
-            Já tem conta?{' '}
-            <Link href="/login" className="text-primary hover:underline">Entrar</Link>
-          </p>
-        </CardFooter>
+    <div>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-[#0a0a0a]">Crie sua conta</h1>
+      <p className="mt-2 text-black/55">Comece a montar suas páginas de boas-vindas.</p>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome</Label>
+          <Input id="name" name="name" required minLength={2} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="pwd">Senha</Label>
+          <Input id="pwd" name="pwd" type="password" required minLength={8} />
+          <p className="text-xs text-black/40">Mínimo 8 caracteres</p>
+        </div>
+        <Button type="submit" size="lg" className="w-full rounded-full" disabled={loading}>
+          {loading ? 'Criando conta…' : 'Criar conta'}
+        </Button>
       </form>
-    </Card>
+
+      <p className="mt-6 text-sm text-black/55">
+        Já tem conta?{' '}
+        <Link href="/login" className="font-semibold text-[#0d9488] hover:underline">Entrar</Link>
+      </p>
+    </div>
   )
 }
