@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "boasvindas.online — guias de boas-vindas para hóspedes",
+  title: {
+    default: "boasvindas.online",
+    template: "%s · boasvindas.online",
+  },
   description: "Crie páginas de boas-vindas para seus hóspedes: Wi-Fi, check-in, regras e dicas locais, com link e QR Code.",
 };
 
