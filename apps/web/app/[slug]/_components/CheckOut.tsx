@@ -17,7 +17,7 @@ export function CheckOut({ whatsapp, whatsappUrl }: CheckOutProps) {
       </div>
 
       <section className="space-y-4">
-        <h3 className="text-xl font-bold font-serif text-[#8c7355] flex items-center gap-2">
+        <h3 className="text-xl font-bold font-serif text-gaccent flex items-center gap-2">
           <ClipboardCheck size={24} />
           Checklist de Saída
         </h3>
@@ -31,7 +31,7 @@ export function CheckOut({ whatsapp, whatsappUrl }: CheckOutProps) {
       </section>
 
       {whatsappUrl && (
-        <section className="bg-white p-6 rounded-2xl shadow-sm border border-[#8c7355]/20 space-y-4">
+        <section className="bg-white p-6 rounded-2xl shadow-sm border border-gaccent/20 space-y-4">
           <div className="text-center">
             <h4 className="font-bold text-lg text-gray-800">Sua opinião é importante!</h4>
             <p className="text-sm text-gray-500">Agradecemos sua atenção e feedback para melhorarmos sempre.</p>

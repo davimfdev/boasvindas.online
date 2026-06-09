@@ -76,7 +76,7 @@ export function SearchOverlay({ isOpen, onClose, onNavigate }: SearchOverlayProp
             autoFocus
             type="text"
             placeholder="O que você está procurando?"
-            className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#f1b418] outline-none text-[#3d2b10]"
+            className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-gsecondary outline-none text-gaccent-strong"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -86,7 +86,7 @@ export function SearchOverlay({ isOpen, onClose, onNavigate }: SearchOverlayProp
             </button>
           )}
         </div>
-        <button onClick={onClose} className="text-[#5d4017] font-bold text-sm px-2">Fechar</button>
+        <button onClick={onClose} className="text-gaccent font-bold text-sm px-2">Fechar</button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -118,11 +118,11 @@ export function SearchOverlay({ isOpen, onClose, onNavigate }: SearchOverlayProp
                 }}
                 className="w-full flex items-center gap-4 p-4 bg-white border border-gray-50 rounded-2xl hover:bg-gray-50 transition-all active:scale-[0.98] text-left shadow-sm mb-2 group"
               >
-                <div className="bg-[#fcfaf7] text-[#5d4017] p-3 rounded-xl group-hover:bg-[#f1b418] group-hover:text-white transition-colors">
+                <div className="bg-gsurface text-gaccent p-3 rounded-xl group-hover:bg-gsecondary group-hover:text-white transition-colors">
                   {result.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-[#5d4017] text-sm leading-tight">{result.title}</h4>
+                  <h4 className="font-bold text-gaccent text-sm leading-tight">{result.title}</h4>
                   {result.description && <p className="text-[11px] text-gray-500 mt-0.5 truncate">{result.description}</p>}
                   {result.category && (
                     <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-400 text-[9px] font-black uppercase tracking-wider rounded">
@@ -130,7 +130,7 @@ export function SearchOverlay({ isOpen, onClose, onNavigate }: SearchOverlayProp
                     </span>
                   )}
                 </div>
-                <ChevronRight size={18} className="text-gray-200 group-hover:text-[#f1b418] transition-colors" />
+                <ChevronRight size={18} className="text-gray-200 group-hover:text-gsecondary transition-colors" />
               </button>
             ))}
           </div>
