@@ -24,7 +24,7 @@ export function Apartment() {
   return (
     <div className="p-6 animate-fadeIn space-y-8">
       <section>
-        <p className="text-lg leading-relaxed italic text-gray-600 border-l-4 border-[#0d9488] pl-4">
+        <p className="text-lg leading-relaxed italic text-gray-600 border-l-4 border-gaccent pl-4">
           &ldquo;Estamos felizes em recebê-lo! Aproveite cada momento, sinta-se em casa.&rdquo;
         </p>
       </section>
@@ -46,14 +46,14 @@ export function Apartment() {
             <div>
               <p className="text-[10px] uppercase text-gray-400 font-black tracking-[0.2em] mb-1">Nome da Rede</p>
               <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <p className="text-lg font-mono font-bold text-[#0d9488]">{WIFI_INFO.network}</p>
+                <p className="text-lg font-mono font-bold text-gaccent">{WIFI_INFO.network}</p>
               </div>
             </div>
 
             <div>
               <p className="text-[10px] uppercase text-gray-400 font-black tracking-[0.2em] mb-1">Senha</p>
               <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100 relative">
-                <p className="text-lg font-mono font-bold text-[#0d9488]">{WIFI_INFO.password}</p>
+                <p className="text-lg font-mono font-bold text-gaccent">{WIFI_INFO.password}</p>
                 <button
                   onClick={copyPassword}
                   className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
@@ -72,7 +72,7 @@ export function Apartment() {
             <div className="pt-2">
               <a
                 href={wifiQrValue}
-                className="w-full bg-[#0d9488] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-teal-600/20 active:scale-[0.98] transition-all"
+                className="w-full bg-gaccent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-teal-600/20 active:scale-[0.98] transition-all"
               >
                 <Wifi size={20} />
                 Conectar agora
@@ -89,8 +89,8 @@ export function Apartment() {
               <QRCodeSVG value={wifiQrValue} size={140} level="H" />
             </div>
             <div className="text-center">
-              <p className="flex items-center justify-center gap-2 font-bold text-[#0d9488] text-sm mb-1">
-                <QrCode size={18} className="text-[#fbbf24]" />
+              <p className="flex items-center justify-center gap-2 font-bold text-gaccent text-sm mb-1">
+                <QrCode size={18} className="text-gsecondary" />
                 Conexão Rápida
               </p>
               <p className="text-[11px] text-gray-500">Aponte a câmera do celular para conectar automaticamente</p>
@@ -101,8 +101,8 @@ export function Apartment() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-xl font-bold font-serif text-[#0d9488]">Facilidades</h3>
-          <span className="text-[10px] bg-[#0d9488]/5 text-[#0d9488] px-2 py-1 rounded-full uppercase font-bold">Toque nos cards para detalhes</span>
+          <h3 className="text-xl font-bold font-serif text-gaccent">Facilidades</h3>
+          <span className="text-[10px] bg-gaccent/5 text-gaccent px-2 py-1 rounded-full uppercase font-bold">Toque nos cards para detalhes</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -150,8 +150,8 @@ export function Apartment() {
             </div>
           </ExpandableFeatureCard>
 
-          <FeatureCard icon={<Coffee className="text-[#0d9488]" />} title="CAFETEIRA TRÊS CORAÇÕES" description="Cápsulas e manual de uso rápido." href={manualCafeteiraUrl} isButton />
-          <FeatureCard icon={<Bed className="text-[#0d9488]" />} title="SOFÁ-CAMA" description="Como transformar o sofá em cama de casal." href={manualSofaCamaUrl} isButton />
+          <FeatureCard icon={<Coffee className="text-gaccent" />} title="CAFETEIRA TRÊS CORAÇÕES" description="Cápsulas e manual de uso rápido." href={manualCafeteiraUrl} isButton />
+          <FeatureCard icon={<Bed className="text-gaccent" />} title="SOFÁ-CAMA" description="Como transformar o sofá em cama de casal." href={manualSofaCamaUrl} isButton />
           <FeatureCard icon={<Tv className="text-blue-500" />} title="SMART TV SALA (43')" description="Netflix e Youtube integrados em um único controle." />
           <FeatureCard icon={<Wind className="text-cyan-500" />} title="AR CONDICIONADO" description="Controle disponível na mesa de cabeceira." />
           <FeatureCard icon={<Zap className="text-amber-500" />} title="TENSÃO DE ENERGIA" description="Todas as tomadas do apartamento são 220V." />
@@ -164,11 +164,11 @@ export function Apartment() {
           >
             <div className="mt-4 space-y-4 text-sm border-t pt-4 border-gray-100">
               <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl">
-                <div className="p-1.5 bg-white text-[#0d9488] rounded-lg shadow-sm">
+                <div className="p-1.5 bg-white text-gaccent rounded-lg shadow-sm">
                   <Dumbbell size={18} />
                 </div>
                 <div>
-                  <p className="font-bold text-[#0d9488]">Academia & SmartStore</p>
+                  <p className="font-bold text-gaccent">Academia & SmartStore</p>
                   <p className="text-gray-600">Funcionamento <span className="font-bold">24 horas</span>.</p>
                 </div>
               </div>
@@ -212,16 +212,16 @@ function FeatureCard({ icon, title, description, href, isButton }: {
 }) {
   const content = (
     <div className={`bg-white p-4 rounded-xl shadow-sm flex gap-4 border transition-all duration-300 ${
-      isButton ? 'border-[#fbbf24] ring-1 ring-[#fbbf24]/10 shadow-md active:scale-[0.98]' : 'border-gray-100'
+      isButton ? 'border-gsecondary ring-1 ring-gsecondary/10 shadow-md active:scale-[0.98]' : 'border-gray-100'
     }`}>
-      <div className={`p-2 h-fit rounded-lg ${isButton ? 'bg-[#fbbf24]/10' : 'bg-gray-50'}`}>{icon}</div>
+      <div className={`p-2 h-fit rounded-lg ${isButton ? 'bg-gsecondary/10' : 'bg-gray-50'}`}>{icon}</div>
       <div className="flex-1">
         <div className="flex justify-between items-start mb-1">
-          <h4 className={`font-bold text-sm ${isButton ? 'text-[#0d9488]' : 'text-gray-800'}`}>{title}</h4>
-          {isButton && <ExternalLink size={16} className="text-[#fbbf24]" />}
+          <h4 className={`font-bold text-sm ${isButton ? 'text-gaccent' : 'text-gray-800'}`}>{title}</h4>
+          {isButton && <ExternalLink size={16} className="text-gsecondary" />}
         </div>
         <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
-        {isButton && <p className="text-[10px] text-[#fbbf24] font-black mt-2 uppercase tracking-widest">Toque para ver tutorial</p>}
+        {isButton && <p className="text-[10px] text-gsecondary font-black mt-2 uppercase tracking-widest">Toque para ver tutorial</p>}
       </div>
     </div>
   )
@@ -247,10 +247,10 @@ function ExpandableFeatureCard({ icon, title, description, children, priority }:
 
   return (
     <div className={`bg-white rounded-xl shadow-md border transition-all duration-300 overflow-hidden ${
-      isOpen ? 'border-[#0d9488] ring-1 ring-[#0d9488]/10' : priority ? 'border-blue-100 ring-1 ring-blue-50' : 'border-gray-100'
+      isOpen ? 'border-gaccent ring-1 ring-gaccent/10' : priority ? 'border-blue-100 ring-1 ring-blue-50' : 'border-gray-100'
     }`}>
       <button onClick={() => setIsOpen(!isOpen)} className="w-full p-4 flex gap-4 text-left items-start">
-        <div className={`p-2 h-fit rounded-lg ${isOpen ? 'bg-[#0d9488]/10' : 'bg-gray-50'}`}>{icon}</div>
+        <div className={`p-2 h-fit rounded-lg ${isOpen ? 'bg-gaccent/10' : 'bg-gray-50'}`}>{icon}</div>
         <div className="flex-1">
           <div className="flex justify-between items-start mb-1">
             <h4 className="font-bold text-sm text-gray-800">{title}</h4>
@@ -258,7 +258,7 @@ function ExpandableFeatureCard({ icon, title, description, children, priority }:
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
           {!isOpen && (
-            <p className="text-[10px] text-[#0d9488] font-black mt-2 uppercase tracking-widest flex items-center gap-1">
+            <p className="text-[10px] text-gaccent font-black mt-2 uppercase tracking-widest flex items-center gap-1">
               {priority ? '💡 Importante: Toque para instruções' : 'Toque para detalhes'}
             </p>
           )}

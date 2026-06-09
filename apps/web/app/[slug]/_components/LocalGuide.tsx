@@ -44,7 +44,7 @@ export function LocalGuide() {
               onClick={() => setFilter(cat)}
               className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-200 border ${
                 filter === cat
-                  ? 'bg-[#5d4017] text-[#f1b418] border-[#5d4017] shadow-md scale-105'
+                  ? 'bg-gaccent text-gsecondary border-gaccent shadow-md scale-105'
                   : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 active:bg-gray-50'
               }`}
             >
@@ -58,13 +58,13 @@ export function LocalGuide() {
         {filteredPlaces.map((place, idx) => (
           <div
             key={idx}
-            className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex items-center justify-between group hover:border-[#f1b418]/30 transition-all animate-slideUp"
+            className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex items-center justify-between group hover:border-gsecondary/30 transition-all animate-slideUp"
             style={{ animationDelay: `${idx * 50}ms` }}
           >
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="bg-[#fcfaf7] text-[#5d4017] p-3 rounded-xl shrink-0">{getCategoryIcon(place.category)}</div>
+              <div className="bg-gsurface text-gaccent p-3 rounded-xl shrink-0">{getCategoryIcon(place.category)}</div>
               <div className="min-w-0 pr-2">
-                <h4 className="font-bold text-[#5d4017] text-sm leading-tight truncate">{place.name}</h4>
+                <h4 className="font-bold text-gaccent text-sm leading-tight truncate">{place.name}</h4>
                 <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{place.category}</p>
                 {place.address && <p className="text-[11px] text-gray-500 mt-1 truncate">{place.address}</p>}
               </div>
@@ -73,7 +73,7 @@ export function LocalGuide() {
             <div className="flex flex-col gap-2 shrink-0">
               <button
                 onClick={() => handleNavigate(place.address || place.name, place.mapUrl)}
-                className="bg-[#5d4017] text-[#f1b418] p-3 rounded-xl flex items-center justify-center shadow-md active:scale-90 transition-all hover:bg-[#3d2b10]"
+                className="bg-gaccent text-gsecondary p-3 rounded-xl flex items-center justify-center shadow-md active:scale-90 transition-all hover:bg-gaccent-strong"
                 aria-label="Abrir no Google Maps"
               >
                 <Navigation size={20} />
@@ -99,10 +99,10 @@ export function LocalGuide() {
         )}
 
         <div className="mt-8 pt-8 border-t border-gray-100">
-          <div className="bg-[#fcfaf7] p-5 rounded-2xl border border-dashed border-[#5d4017]/20">
+          <div className="bg-gsurface p-5 rounded-2xl border border-dashed border-gaccent/20">
             <p className="text-xs text-gray-500 font-medium italic text-center leading-relaxed">
               Dica do Anfitrião: <br />
-              <span className="text-[#5d4017] font-bold not-italic text-sm">&ldquo;O Bistrô do Sol tem a melhor picanha da região!&rdquo;</span>
+              <span className="text-gaccent font-bold not-italic text-sm">&ldquo;O Bistrô do Sol tem a melhor picanha da região!&rdquo;</span>
             </p>
           </div>
         </div>

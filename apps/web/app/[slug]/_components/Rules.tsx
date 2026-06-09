@@ -7,7 +7,7 @@ export function Rules() {
   return (
     <div className="p-6 animate-fadeIn space-y-6">
       <div className="text-center pb-4">
-        <h3 className="text-2xl font-serif font-bold text-[#8c7355]">&ldquo;Mi casa su casa&rdquo;</h3>
+        <h3 className="text-2xl font-serif font-bold text-gaccent">&ldquo;Mi casa su casa&rdquo;</h3>
         <p className="text-sm text-gray-500 italic mt-1">Cuidem do nosso espaço como se fosse a casa de vocês!</p>
       </div>
 
