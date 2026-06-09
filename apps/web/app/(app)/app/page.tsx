@@ -1,15 +1,19 @@
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, LayoutGrid } from 'lucide-react'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { pages } from '@/lib/db/schema'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { NewPageDialog } from './_components/NewPageDialog'
 import { PublishToggle } from './_components/PublishToggle'
 import { EditPageDialog } from './_components/EditPageDialog'
+
+const THEME_ACCENT: Record<string, string> = {
+  modern: 'from-[#0d9488] to-[#5eead4]',
+  rustic: 'from-[#5d4017] to-[#d99a2b]',
+}
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -20,34 +24,44 @@ export default async function DashboardPage() {
     .orderBy(pages.createdAt)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-semibold">Suas páginas</h1>
-          <p className="text-sm text-muted-foreground">Crie e gerencie as páginas de boas-vindas dos seus hóspedes.</p>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-[#0a0a0a]">Suas páginas</h1>
+          <p className="mt-1 text-black/50">Crie e gerencie as boas-vindas dos seus hóspedes.</p>
         </div>
         <NewPageDialog />
       </div>
 
       {userPages.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm text-muted-foreground">Você ainda não criou nenhuma página.</p>
-            <NewPageDialog />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center gap-5 rounded-3xl border border-dashed border-black/15 bg-[#fdfdfb] py-20 text-center">
+          <div className="rounded-2xl bg-[#0d9488]/10 p-4 text-[#0d9488]">
+            <LayoutGrid className="size-7" />
+          </div>
+          <div>
+            <p className="font-display text-xl font-bold text-[#0a0a0a]">Nenhuma página ainda</p>
+            <p className="mt-1 text-sm text-black/50">Crie a primeira página de boas-vindas do seu apartamento.</p>
+          </div>
+          <NewPageDialog />
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {userPages.map((page) => (
-            <Card key={page.id}>
-              <CardHeader className="flex-row items-start justify-between gap-2">
-                <CardTitle className="text-base">{page.title}</CardTitle>
-                <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
-                  {page.status === 'published' ? 'Publicada' : 'Rascunho'}
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <span className="block truncate font-mono text-sm text-muted-foreground">/{page.slug}</span>
+            <article
+              key={page.id}
+              className="group overflow-hidden rounded-3xl border border-black/8 bg-[#fdfdfb] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5"
+            >
+              <div className={`h-1.5 bg-gradient-to-r ${THEME_ACCENT[page.theme] ?? THEME_ACCENT.modern}`} />
+              <div className="space-y-4 p-6">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="font-display truncate text-xl font-bold text-[#0a0a0a]">{page.title}</h2>
+                    <span className="block truncate font-mono text-sm text-black/45">/{page.slug}</span>
+                  </div>
+                  <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
+                    {page.status === 'published' ? 'Publicada' : 'Rascunho'}
+                  </Badge>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <PublishToggle pageId={page.id} published={page.status === 'published'} />
                   <EditPageDialog page={page} />
@@ -56,8 +70,8 @@ export default async function DashboardPage() {
                     Ver
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           ))}
         </div>
       )}

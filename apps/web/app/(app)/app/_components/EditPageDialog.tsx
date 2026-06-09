@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil } from 'lucide-react'
+import { Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,8 +17,8 @@ import {
 } from '@/components/ui/dialog'
 
 const THEMES = [
-  { value: 'modern', label: 'Modern', hint: 'Clean, Inter, tons de teal', swatch: ['#0d9488', '#fbbf24'] },
-  { value: 'rustic', label: 'Rustic', hint: 'Playfair, paleta terra/madeira', swatch: ['#5d4017', '#d99a2b'] },
+  { value: 'modern', label: 'Modern', hint: 'Clean, tons de teal', gradient: 'from-[#0d9488] to-[#5eead4]' },
+  { value: 'rustic', label: 'Rustic', hint: 'Playfair, terra e madeira', gradient: 'from-[#5d4017] to-[#d99a2b]' },
 ] as const
 
 interface EditPageDialogProps {
@@ -78,22 +78,31 @@ export function EditPageDialog({ page }: EditPageDialogProps) {
           </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Tema</legend>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {THEMES.map((t) => (
                 <label
                   key={t.value}
-                  className="flex cursor-pointer flex-col gap-1 rounded-md border p-3 has-checked:border-[var(--accent)] has-checked:ring-1 has-checked:ring-[var(--accent)]"
+                  className="group cursor-pointer overflow-hidden rounded-xl border-2 transition-all has-checked:border-[#0d9488] has-checked:shadow-md"
                 >
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <input type="radio" name="edit-theme" value={t.value} checked={theme === t.value} onChange={() => setTheme(t.value)} />
-                    {t.label}
-                    <span className="ml-auto flex gap-1" aria-hidden>
-                      {t.swatch.map((c) => (
-                        <span key={c} className="size-4 rounded-full border border-black/10" style={{ backgroundColor: c }} />
-                      ))}
-                    </span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">{t.hint}</span>
+                  <input
+                    type="radio"
+                    name="edit-theme"
+                    value={t.value}
+                    checked={theme === t.value}
+                    onChange={() => setTheme(t.value)}
+                    className="sr-only"
+                  />
+                  <div className={`relative h-16 bg-gradient-to-br ${t.gradient}`}>
+                    <div className="absolute bottom-2 left-2 h-5 w-10 rounded-sm bg-white/85" />
+                    <div className="absolute bottom-2 left-14 h-5 w-5 rounded-full bg-white/85" />
+                  </div>
+                  <div className="flex items-center justify-between gap-1 p-3">
+                    <div>
+                      <p className="text-sm font-semibold">{t.label}</p>
+                      <p className="text-xs text-muted-foreground">{t.hint}</p>
+                    </div>
+                    {theme === t.value && <Check className="size-4 shrink-0 text-[#0d9488]" />}
+                  </div>
                 </label>
               ))}
             </div>
