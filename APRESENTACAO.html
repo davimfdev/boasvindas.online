@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>boasvindas.online — Projeto</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #ececec;
+      color: #2e2e2e;
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #3c4059 0%, #2a2d40 100%);
+      color: white;
+      padding: 28px 32px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(60,64,89,0.35);
+    }
+
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-logo {
+      width: 44px;
+      height: 44px;
+      background: #f3ba11;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+
+    header p {
+      font-size: 0.78rem;
+      opacity: 0.75;
+      margin-top: 3px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Tabs ── */
+    .tabs-wrapper {
+      background: white;
+      border-bottom: 2px solid #d6d6d6;
+      position: sticky;
+      top: 89px;
+      z-index: 90;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+
+    .tabs {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      padding: 15px 22px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: #64748b;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .tab-btn:hover { color: #3c4059; background: #f5f4f0; }
+
+    .tab-btn.active {
+      color: #3c4059;
+      border-bottom-color: #f3ba11;
+      font-weight: 700;
+    }
+
+    /* ── Content ── */
+    .content {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 36px 24px 80px;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn 0.2s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Markdown rendering ── */
+    .md h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #3c4059;
+      border-bottom: 3px solid #f3ba11;
+      padding-bottom: 14px;
+      margin-bottom: 28px;
+      letter-spacing: -0.03em;
+    }
+
+    .md h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #3c4059;
+      margin-top: 40px;
+      margin-bottom: 16px;
+      padding-left: 12px;
+      border-left: 4px solid #f3ba11;
+    }
+
+    .md h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #3c4059;
+      margin-top: 28px;
+      margin-bottom: 12px;
+    }
+
+    .md h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #4b5563;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    .md p { margin-bottom: 14px; }
+
+    .md ul, .md ol {
+      margin-left: 22px;
+      margin-bottom: 14px;
+    }
+
+    .md li {
+      margin-bottom: 6px;
+    }
+
+    .md li > ul, .md li > ol {
+      margin-top: 6px;
+    }
+
+    .md blockquote {
+      border-left: 4px solid #f3ba11;
+      background: #fdf8e8;
+      padding: 14px 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 20px 0;
+      color: #3c4059;
+    }
+
+    .md blockquote p { margin: 0 0 6px; }
+    .md blockquote p:last-child { margin: 0; }
+
+    /* ── Tables ── */
+    .md table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 0.88rem;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+
+    .md th {
+      background: #3c4059;
+      color: #f3ba11;
+      padding: 11px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.82rem;
+      letter-spacing: 0.02em;
+    }
+
+    .md td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    .md tr:nth-child(even) td { background: #f5f4f0; }
+    .md tr:last-child td { border-bottom: none; }
+    .md tr:hover td { background: #fdf8e8; transition: background 0.15s; }
+
+    /* ── Code ── */
+    .md code {
+      background: #3c4059;
+      color: #f3ba11;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.82em;
+      font-family: 'Consolas', 'SF Mono', 'Monaco', 'Fira Code', monospace;
+    }
+
+    .md pre {
+      background: #0f172a;
+      color: #cbd5e1;
+      padding: 20px 22px;
+      border-radius: 12px;
+      overflow-x: auto;
+      margin: 18px 0;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+
+    .md pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .md hr {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 32px 0;
+    }
+
+    .md strong { color: #0f172a; font-weight: 700; }
+    .md em { color: #475569; }
+
+    .md a {
+      color: #3c4059;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .md a:hover { color: #f3ba11; }
+
+    /* ── Checkboxes (task lists) ── */
+    .md input[type="checkbox"] {
+      accent-color: #f3ba11;
+      width: 15px;
+      height: 15px;
+      margin-right: 6px;
+      vertical-align: middle;
+      cursor: default;
+    }
+
+    /* ── Highlight spans (⚡ MVP marker badge) ── */
+    .md li:has(input[type="checkbox"]) { list-style: none; margin-left: -22px; }
+
+    /* ── Cards for specific sections ── */
+    .md h2 + table,
+    .md h3 + table {
+      margin-top: 10px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      border-top: 1px solid #e2e8f0;
+      background: white;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      header { padding: 18px 16px; }
+      .tabs-wrapper { top: 77px; }
+      .tab-btn { padding: 12px 14px; font-size: 0.8rem; gap: 5px; }
+      .content { padding: 20px 14px 60px; }
+      .md h1 { font-size: 1.45rem; }
+      .md h2 { font-size: 1.1rem; }
+      .md table { font-size: 0.78rem; }
+      .md td, .md th { padding: 8px 10px; }
+      .md pre { font-size: 0.73rem; padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-logo">🏡</div>
+    <div>
+      <h1>boasvindas.online</h1>
+      <p>Construtor de Guias Digitais para Anfitriões do Airbnb</p>
+    </div>
+  </div>
+</header>
+
+<div class="tabs-wrapper">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('sprint', this)">🚀 Produto Inicial (16h)</button>
+    <button class="tab-btn" onclick="showTab('stack', this)">⚙️ Tecnologias</button>
+    <button class="tab-btn" onclick="showTab('arch', this)">🏗️ Como Funciona</button>
+    <button class="tab-btn" onclick="showTab('roadmap', this)">🗺️ Roadmap Completo</button>
+    <button class="tab-btn" onclick="showTab('cobranca', this)">💰 Cobrança</button>
+  </div>
+</div>
+
+<div class="content">
+  <div id="tab-sprint" class="tab-panel active">
+    <div class="md" id="sprint-content"></div>
+  </div>
+  <div id="tab-stack" class="tab-panel">
+    <div class="md" id="stack-content"></div>
+  </div>
+  <div id="tab-arch" class="tab-panel">
+    <div class="md" id="arch-content"></div>
+  </div>
+  <div id="tab-roadmap" class="tab-panel">
+    <div class="md" id="roadmap-content"></div>
+  </div>
+  <div id="tab-cobranca" class="tab-panel">
+    <div class="md" id="cobranca-content"></div>
+  </div>
+</div>
+
+<footer>boasvindas.online &mdash; Documentação do Projeto</footer>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CONTEÚDO MARKDOWN
+     (não edite abaixo a menos que queira atualizar o texto)
+     ═══════════════════════════════════════════════════════════ -->
+
+<script type="text/markdown" id="md-sprint">
+# Produto Inicial — boasvindas.online
+
+> Pai, esse documento mostra o que vou entregar nas primeiras 16 horas de trabalho — o produto inicial funcionando. O produto completo está na aba **Roadmap Completo**.
+
+---
+
+## O que você vai receber
+
+Ao final das 16h, o site estará no ar com:
+
+| Funcionalidade | |
+|---------------|--|
+| URL pública funcionando (`boasvindas.online`) | ✅ |
+| Cadastro e login de anfitriões | ✅ |
+| Criar página com título, endereço e WhatsApp | ✅ |
+| Escolher entre 2 temas (Modern + Rustic) | ✅ |
+| Guia do hóspede acessível em `boasvindas.online/nomedoapartamento` | ✅ |
+| Seções fixas: boas-vindas, apartamento, check-in, regras, guia local, check-out, emergência | ✅ |
+| QR Code para o link da página | ✅ |
+| Botão WhatsApp flutuante | ✅ |
+| Design responsivo — funciona no celular e no computador | ✅ |
+
+### O que **não** entra ainda (produto completo)
+- Editor visual para arrastar e soltar seções
+- Upload de fotos diretamente na plataforma
+- Personalização de fontes, cores e botões
+- Todos os 7 temas
+- Analytics, exportação PDF, domínio personalizado
+- Colaboração, multi-idioma, biblioteca de templates
+
+---
+
+## Como vão ser as 16 horas
+
+### Bloco 1 — Fundação (4h)
+
+**1ª hora — Base do site**
+- Criar o projeto com todas as tecnologias
+- Conectar ao servidor (Netlify)
+- Site no ar com URL pública funcionando
+
+**2ª hora — Banco de Dados**
+- Criar o banco de dados
+- Configurar a estrutura para usuários e páginas
+
+**3ª e 4ª hora — Login e Cadastro**
+- Sistema de login com email e senha
+- Área protegida do anfitrião
+- Redirecionamento após login para o painel
+
+---
+
+### Bloco 2 — Core do Produto (5h)
+
+**5ª e 6ª hora — Painel do Anfitrião**
+- Painel com lista de páginas criadas
+- Formulário para criar página: título, endereço, WhatsApp, tema
+- Botão "Ver página" abre o guia do hóspede
+
+**7ª e 8ª hora — Guia do Hóspede**
+- Guia do hóspede funcionando visualmente
+- Seções fixas com dados do banco: título, WhatsApp, tema
+- Botão WhatsApp flutuante + QR Code
+
+**9ª hora — Publicação**
+- Endereço público `boasvindas.online/nomedoapartamento`
+- Página 404 se endereço não existir
+- Botão publicar/despublicar no painel
+
+---
+
+### Bloco 3 — Temas + Polimento (4h)
+
+**10ª e 11ª hora — 2 Temas**
+- Tema **Modern**: limpo, moderno, cores neutras
+- Tema **Rustic**: tipografia clássica, paleta terra/madeira
+- Preview do tema ao selecionar no painel
+
+**12ª e 13ª hora — Visual do Painel**
+- Painel com design profissional
+- Card de cada página: nome, status, link, QR Code, botão editar
+- Tela de edição básica: título, WhatsApp, tema
+
+---
+
+### Bloco 4 — Deploy Final + Margem de Segurança (3h)
+
+**14ª hora — Deploy de Produção**
+- Configurações finais do servidor
+- Teste completo: cadastro → criar página → publicar → ver guia
+
+**15ª e 16ª hora — Margem de Segurança**
+- Reservado para imprevistos e ajustes
+- Se sobrar tempo: terceiro tema (Glass)
+
+---
+
+## Cronograma
+
+| | Horário | Tarefa |
+|-|---------|--------|
+| **Dia 1** | 09:00–10:00 | Base do site + deploy |
+| | 10:00–11:00 | Banco de dados |
+| | 11:00–13:00 | Login e cadastro |
+| | 14:00–16:00 | Painel do anfitrião |
+| | 16:00–18:00 | Guia do hóspede |
+| **Dia 2** | 09:00–10:00 | Publicação + rota pública |
+| | 10:00–12:00 | 2 temas |
+| | 13:00–15:00 | Visual do painel |
+| | 15:00–16:00 | Deploy final |
+| | 16:00–18:00 | Margem de segurança |
+
+---
+
+## O que vem depois
+
+Esse produto inicial é a fundação. Após entregá-lo, o desenvolvimento continua com:
+- Editor visual completo (arrastar e soltar)
+- Upload de fotos reais
+- Todos os 7 temas
+- Analytics, exportação PDF
+- E tudo mais que está no **Roadmap Completo**
+</script>
+
+<script type="text/markdown" id="md-stack">
+# Tecnologias — boasvindas.online
+
+> ⚡ = usado já no produto inicial (16h). O restante entra nas fases seguintes.
+
+---
+
+## Frontend + Backend
+
+| Camada | Tecnologia | Para que serve |
+|--------|-----------|----------------|
+| Framework | ⚡ **Next.js 15** | Base de tudo — renderiza as landing pages e o painel do host |
+| Linguagem | ⚡ **TypeScript** | Código mais seguro e com menos bugs |
+| CSS | ⚡ **Tailwind CSS v4** | Estilização rápida e responsiva |
+| Componentes | ⚡ **shadcn/ui** | Biblioteca de botões, tabelas, formulários prontos |
+| Animações | **Framer Motion** | Transições suaves no editor |
+| Estado | **Zustand** | Gerenciamento de estado do builder |
+| Formulários | **React Hook Form + Zod** | Formulários validados no frontend e backend |
+| Drag & Drop | **dnd-kit** | Arrastar e soltar seções no editor |
+| Ícones | ⚡ **Lucide React** | Ícones consistentes (mesmo pacote do demo) |
+| QR Code | ⚡ **qrcode.react** | Gera o QR Code de cada página |
+
+## API (dentro do Next.js)
+
+| Camada | Tecnologia | Para que serve |
+|--------|-----------|----------------|
+| API | ⚡ **Next.js Route Handlers** | API REST sem servidor separado |
+| Banco | ⚡ **Drizzle ORM** | Comunicação com o banco de dados |
+| Validação | ⚡ **Zod** | Valida dados no servidor |
+| Autenticação | ⚡ **Auth.js v5** | Login, sessões, segurança |
+| Upload | **@aws-sdk/client-s3** | Upload de fotos para o Backblaze B2 |
+
+> ⚡ **MVP:** upload de fotos não entra nas 16h. Host usa links externos por enquanto.
+
+## Banco de Dados
+
+| Serviço | Para que serve |
+|---------|----------------|
+| ⚡ **Neon (PostgreSQL)** | Armazena usuários, páginas, seções, fotos |
+| ⚡ **Drizzle Kit** | Gerencia mudanças no banco de dados |
+
+## Armazenamento de Fotos
+
+| Serviço | Para que serve |
+|---------|----------------|
+| **Backblaze B2** | Armazena as fotos de cada landing page |
+| **Cloudflare** | Entrega as fotos rapidamente para qualquer lugar do mundo |
+
+## Hospedagem
+
+| Serviço | O que hospeda | Custo | MVP |
+|---------|--------------|-------|-----|
+| **Netlify** | Tudo — site + API | Grátis até escalar | ⚡ |
+| **Neon** | Banco de dados | Grátis no plano inicial | ⚡ |
+| **Backblaze B2** | Fotos | ~R$ 0,03/GB/mês | — |
+
+> Tudo no Netlify. Sem servidor separado. Zero custo para começar.
+
+---
+
+## Temas das Landing Pages
+
+| Tema | Identidade Visual |
+|------|-----------------|
+| **Modern** | Clean, minimalista, muito espaço em branco |
+| **Rustic** | Texturas de madeira/terra, fontes serifadas, paleta quente |
+| **Glass** | Glassmorphism, transparências, gradientes suaves |
+| **Mica** | Visual acrílico suave, inspirado no Windows 11 |
+| **Tropical** | Cores vibrantes, tipografia marcante, padrões naturais |
+| **Nordic** | Paleta fria, tipografia geométrica, minimalismo extremo |
+| **Luxury** | Dourado, preto, tipografia display, sofisticado |
+
+## Fontes Disponíveis
+
+**Serifadas:** Playfair Display, Lora, Cormorant Garamond
+
+**Sem serifa:** Inter, Plus Jakarta Sans, DM Sans
+
+**Display:** Syne, Space Grotesk, Outfit
+
+**Manuscritas:** Caveat, Dancing Script
+</script>
+
+<script type="text/markdown" id="md-arch">
+# Como Funciona — boasvindas.online
+
+> Esta seção explica a estrutura técnica do produto para referência futura.
+
+---
+
+## Visão Geral
+
+O produto é um único site que faz três coisas ao mesmo tempo:
+
+| Parte | URL | Para quem |
+|-------|-----|-----------|
+| Homepage de marketing | `boasvindas.online` | Visitantes e futuros clientes |
+| Painel do host | `boasvindas.online/app` | Anfitriões cadastrados |
+| Guia do hóspede | `boasvindas.online/nomedoapartamento` | Hóspedes |
+
+Tudo roda num único deploy no **Netlify**. Sem servidor separado.
+
+---
+
+## Banco de Dados
+
+O banco armazena quatro tipos de informação:
+
+| Tabela | O que guarda |
+|--------|-------------|
+| **Usuários** | Email, senha, nome, plano |
+| **Páginas** | Título, endereço, tema, fonte, WhatsApp, status (rascunho/publicado) |
+| **Seções** | Cada bloco de conteúdo da página (apartamento, check-in, regras, etc.) |
+| **Mídia** | URLs das fotos de cada página |
+
+---
+
+## Modelo de Monetização
+
+### Avulso
+| 1 página | R$ 19/mês |
+|----------|-----------|
+| Inclui | 7 temas, QR code, WhatsApp, seções completas, editor visual |
+
+### Pacotes
+| Pacote | Páginas | Preço | Economia |
+|--------|---------|-------|----------|
+| Duplex | 2 | R$ 29/mês | R$ 9 |
+| Triplex | 3 | R$ 39/mês | R$ 18 |
+| Quinteto | 5 | R$ 59/mês | R$ 36 |
+
+### Planos
+| Plano | Páginas | Preço | Diferencial |
+|-------|---------|-------|-------------|
+| Anfitrião Pro | até 10 | R$ 99/mês | Analytics + suporte prioritário |
+| Gestor | ilimitadas | R$ 199/mês | Colaboração, white-label |
+
+### Add-ons (por página/mês)
+
+| Add-on | Preço | Domínio de quem | O que boasvindas.online faz |
+|--------|-------|----------------|---------------------------|
+| Subdomínio (`flatipe.boasvindas.online`) | +R$ 9 | De vocês | Configura DNS wildcard + roteamento |
+| Domínio customizado (`flatipe.com.br`) | +R$ 15 | Do cliente | Aceita o domínio + provisiona SSL |
+| Exportação PDF | +R$ 5 | — | Gera PDF imprimível sob demanda |
+| Analytics avançado | +R$ 9 | — | Métricas detalhadas de visitas |
+
+> **Sobre domínios:** nenhum dos dois add-ons exige comprar domínios.
+> No subdomínio, o próprio domínio `boasvindas.online` é usado.
+> No domínio customizado, o cliente já tem ou compra o domínio por conta própria.
+
+---
+
+## Como as Landing Pages são Entregues
+
+Quando um hóspede acessa `boasvindas.online/flat-ipe`:
+
+1. O Netlify verifica se a página está publicada
+2. Se publicada: entrega um HTML já pronto (gerado e cacheado — carregamento instantâneo)
+3. O HTML aplica o tema e as fontes escolhidas pelo host
+4. A página é indexável pelo Google (SEO nativo)
+
+---
+
+## Funcionalidades por Fase
+
+| Feature | Incluída em | Quando |
+|---------|-----------|--------|
+| QR Code por página | Todos | ⚡ MVP |
+| 2 temas (Modern + Rustic) | Todos | ⚡ MVP |
+| Google Maps embed | Todos | Fase 2 |
+| 7 temas completos | Todos | Fase 2 |
+| Upload de fotos real | Todos | Fase 1 |
+| Editor drag & drop | Todos | Fase 2 |
+| Multi-idioma PT/EN | Avulso+ | Fase 5 |
+| Analytics básico | Avulso+ | Fase 5 |
+| Analytics avançado | Add-on | Fase 5 |
+| Exportação PDF | Add-on | Fase 5 |
+| Templates prontos | Todos | Fase 5 |
+| Colaboração co-host | Anfitrião Pro+ | Fase 5 |
+| Subdomínio personalizado | Add-on | Fase 5 |
+| Domínio customizado | Add-on | Fase 5 |
+| White-label | Gestor | Fase 6 |
+
+---
+
+## Escalabilidade
+
+| Componente | Como escala |
+|-----------|-------------|
+| Site + API (Netlify) | Serverless — escala automático, sem configuração |
+| Landing pages | HTML cacheado no CDN — zero carga no servidor por visita |
+| Banco de dados (Neon) | Serverless — upgrade de plano quando necessário |
+| Fotos (Backblaze B2) | Armazenamento ilimitado, CDN global |
+</script>
+
+<script type="text/markdown" id="md-roadmap">
+# Roadmap Completo — boasvindas.online
+
+> O produto inicial (MVP) é entregue em 16h e está detalhado na aba "Produto Inicial".
+> Este roadmap descreve o caminho até o produto completo.
+
+---
+
+## ⚡ Produto Inicial — 16 horas
+
+| Entregável | |
+|-----------|--|
+| Site no ar (Netlify) com URL pública | ⚡ |
+| Banco de dados configurado | ⚡ |
+| Login e cadastro de hosts | ⚡ |
+| Painel + criar/publicar página | ⚡ |
+| Guia do hóspede em `boasvindas.online/[slug]` | ⚡ |
+| 2 temas (Modern + Rustic) | ⚡ |
+| QR Code + botão WhatsApp | ⚡ |
+
+---
+
+## Fase 0 — Fundação Completa (Semanas 1–2)
+
+- [ ] Configurar monorepo com boas práticas de CI/CD
+- [ ] Pipeline de testes e deploy automático (GitHub Actions)
+- [ ] Configurar Backblaze B2 para upload de fotos
+- [ ] Configurar CDN Cloudflare para entrega de fotos
+
+---
+
+## Fase 1 — Upload de Fotos & Core (Semanas 3–5)
+
+- [ ] Upload de fotos real para o Backblaze B2
+- [ ] Componente de upload com drag & drop
+- [ ] Duplicar / renomear / deletar páginas
+- [ ] Geração automática de endereço da página
+
+---
+
+## Fase 2 — Editor Visual Completo (Semanas 6–11)
+
+### Editor de Seções
+- [ ] Interface de seções com arrastar e soltar
+- [ ] Mostrar/ocultar seções
+- [ ] Seções suportadas:
+  - [ ] Hero (foto de capa, título, boas-vindas)
+  - [ ] Apartamento (descrição, comodidades)
+  - [ ] Check-in (instruções, código de acesso)
+  - [ ] Regras da casa
+  - [ ] Guia local (lugares próximos, Google Maps)
+  - [ ] Check-out
+  - [ ] Emergências (contatos)
+  - [ ] Galeria de fotos
+  - [ ] Seção customizada (texto livre)
+
+### Customização Visual
+- [ ] Todos os 7 temas (modern, rustic, glass, mica, tropical, nordic, luxury)
+- [ ] Seletor de fonte (título + corpo separados)
+- [ ] Escolha de cor de destaque
+- [ ] Estilo de botão (sólido, outline, gradiente)
+- [ ] Preview em tempo real das alterações
+
+### Layout de Fotos
+- [ ] Layouts por seção: largura total, lado a lado, grade, carrossel
+- [ ] Reposicionar fotos dentro das seções
+
+---
+
+## Fase 3 — Preview & Publicação (Semanas 12–14)
+
+- [ ] Preview da landing page dentro do builder
+- [ ] Toggle mobile / tablet / desktop no preview
+- [ ] Link de preview antes de publicar
+- [ ] SEO: meta tags, Open Graph, favicon por cor de destaque
+- [ ] Busca interna no guia do hóspede
+
+---
+
+## Fase 4 — Homepage Marketing (Semanas 15–17)
+
+- [ ] Hero section com CTA "Criar meu guia grátis"
+- [ ] Demonstração interativa dos temas
+- [ ] Seção "Como funciona" (3 passos)
+- [ ] Galeria de exemplos reais
+- [ ] Página de planos e preços
+- [ ] Depoimentos de clientes
+
+### Preços na Homepage
+
+**Avulso:** R$ 19/mês
+
+| Pacote | Páginas | Preço |
+|--------|---------|-------|
+| Duplex | 2 | R$ 29/mês |
+| Triplex | 3 | R$ 39/mês |
+| Quinteto | 5 | R$ 59/mês |
+
+| Plano | Páginas | Preço |
+|-------|---------|-------|
+| Anfitrião Pro | até 10 | R$ 99/mês |
+| Gestor | ilimitadas | R$ 199/mês |
+
+---
+
+## Fase 5 — Funcionalidades Extras (Semanas 18–22)
+
+### Analytics
+- [ ] Contagem de visitas por página (sem cookies, LGPD-friendly)
+- [ ] Seções mais acessadas
+- [ ] Dashboard de analytics no painel do host
+
+### Exportação PDF
+- [ ] Versão imprimível do guia (A4, fonte legível)
+- [ ] Download disponível no painel do host
+
+### Multi-idioma
+- [ ] Painel em PT/EN
+- [ ] Guias com conteúdo bilíngue
+- [ ] Toggle de idioma para o hóspede
+
+### Templates Prontos
+- [ ] Templates por tipo de imóvel: praia, montanha, urbano, rural
+- [ ] Aplicar template preenche o guia com conteúdo de exemplo
+
+### Colaboração
+- [ ] Convidar co-host por email
+- [ ] Permissão limitada (sem acesso a cobrança)
+
+### Add-on: Subdomínio Personalizado
+- [ ] `flatipe.boasvindas.online` em vez de `boasvindas.online/flat-ipe`
+- [ ] Ativar por página no painel (+R$ 9/mês)
+
+### Add-on: Domínio Customizado do Cliente
+- [ ] Cliente aponta o domínio próprio (`flatipe.com.br`) para a página
+- [ ] SSL automático
+- [ ] Domínio sempre é do cliente — boasvindas.online não compra nada
+
+---
+
+## Fase 6 — Lançamento (Semanas 23–26)
+
+- [ ] Testes de performance e carga
+- [ ] Lighthouse score acima de 90 em todas as páginas
+- [ ] Revisão completa de segurança
+- [ ] Monitoramento de erros em produção
+- [ ] Beta fechado com 10–20 hosts reais
+- [ ] Ajustes pós-beta
+- [ ] Lançamento público
+
+---
+
+## Sequência de Desenvolvimento
+
+```
+MVP (16h) → Fase 0 → Fase 1 → Fase 2 → Fase 3
+                                              ↓
+                               Fase 4 (pode ser paralela)
+                                              ↓
+                                          Fase 5
+                                              ↓
+                                          Fase 6 (Lançamento)
+```
+
+Fase 4 (homepage de marketing) pode ser desenvolvida em paralelo com a Fase 3, pois usa demos estáticos e não depende do editor completo.
+</script>
+
+<script type="text/markdown" id="md-cobranca">
+# Cobrança — boasvindas.online
+
+> Pai, essa aba é pra gente conversar sobre como vamos estruturar a parte financeira do projeto. Tudo que está aqui são hipóteses e estou aberto a discutir — o objetivo é chegar num acordo que seja justo para os dois.
+
+---
+
+## Quanto o produto vai cobrar dos clientes
+
+*(Esses valores são hipóteses iniciais — podem ser ajustados conforme o mercado)*
+
+### Avulso
+| | |
+|-|-|
+| 1 página | R$ 19/mês |
+
+### Pacotes — para quem tem mais de um apartamento
+
+| Pacote | Páginas | Preço | Economia |
+|--------|---------|-------|----------|
+| Duplex | 2 | R$ 29/mês | R$ 9 |
+| Triplex | 3 | R$ 39/mês | R$ 18 |
+| Quinteto | 5 | R$ 59/mês | R$ 36 |
+
+### Planos — para gestores e anfitriões grandes
+
+| Plano | Páginas | Preço | Diferencial |
+|-------|---------|-------|-------------|
+| Anfitrião Pro | até 10 | R$ 99/mês | Analytics + suporte prioritário |
+| Gestor | ilimitadas | R$ 199/mês | Colaboração, white-label |
+
+### Add-ons opcionais — por página, por mês
+
+| Add-on | Preço | O que é |
+|--------|-------|---------|
+| Subdomínio personalizado | +R$ 9 | `flatipe.boasvindas.online` em vez de `/flat-ipe` |
+| Domínio próprio do cliente | +R$ 15 | Cliente aponta o domínio dele (ex: `flatipe.com.br`) para a página — o domínio é sempre do cliente, não precisa comprar nada |
+| Exportação PDF | +R$ 5 | Versão imprimível do guia para hóspedes |
+| Analytics avançado | +R$ 9 | Métricas detalhadas de visitas e acessos |
+
+---
+
+## Como você me paga pelo desenvolvimento
+
+Separei duas opções para a gente discutir. São hipóteses — o valor final é o que fizer sentido para os dois.
+
+---
+
+### Opção A — Cobrar o produto inicial + participação nos lucros
+
+| Item | Valor hipotético |
+|------|----------------|
+| Produto inicial (16h) | **R$ 800** |
+| Desenvolvimento contínuo | **20% da receita líquida** |
+
+**O que isso significa:**
+- Pago R$ 800 pelo que entrego agora — o site funcionando, pronto para usar
+- A partir daí, em vez de cobrar por hora, entro com 20% dos lucros
+- Quanto mais o produto crescer, melhor para os dois
+- R$ 800 está bem abaixo do que o mercado cobra por esse tipo de trabalho (mercado: R$ 960–1.600 para 16h de desenvolvedor especializado)
+
+**Referência de mercado:**
+
+| Tipo de projeto | Preço de mercado | Este projeto |
+|----------------|-----------------|-------------|
+| Site institucional simples | R$ 1.500–4.000 | — |
+| Aplicação web personalizada | R$ 5.000–15.000 | R$ 800 |
+| Plataforma SaaS completa | R$ 20.000–60.000+ | R$ 800 + % lucros |
+
+---
+
+### Opção B — Pagamento por hora, sem participação nos lucros
+
+| Item | Valor hipotético |
+|------|----------------|
+| Taxa por hora | R$ 60–80/h |
+| Produto inicial (16h) | R$ 960–1.280 |
+| Desenvolvimento contínuo | mesma taxa por hora |
+
+**O que isso significa:**
+- Pago por cada hora trabalhada, sem vínculo com o resultado do negócio
+- Mais simples de calcular, sem riscos para nenhum dos lados
+- Se o produto crescer muito, você não divide lucros — mas também paga mais ao longo do tempo
+
+---
+
+> Estou à disposição para conversar sobre qualquer ajuste nesses valores. O mais importante é que a gente chegue num acordo que faça sentido e permita desenvolver o produto com qualidade.
+</script>
+
+<script>
+  marked.use({ gfm: true, breaks: false });
+
+  function renderMd(srcId, destId) {
+    const src = document.getElementById(srcId).textContent;
+    document.getElementById(destId).innerHTML = marked.parse(src);
+    // Make task list checkboxes disabled (read-only)
+    document.querySelectorAll('#' + destId + ' input[type="checkbox"]').forEach(cb => {
+      cb.disabled = true;
+    });
+  }
+
+  renderMd('md-sprint',   'sprint-content');
+  renderMd('md-stack',    'stack-content');
+  renderMd('md-arch',     'arch-content');
+  renderMd('md-roadmap',  'roadmap-content');
+  renderMd('md-cobranca', 'cobranca-content');
+
+  function showTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+
+
+</body>
+</html>
