@@ -70,7 +70,7 @@ export default function HomePage() {
       <section className="relative grain mesh-dark flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity contrast-125"
-          style={{ backgroundImage: "url(https://picsum.photos/seed/apartment-interior/1920/1080)" }}
+          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1920&q=80)" }}
         />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.55)_75%)]" />
 
@@ -122,7 +122,7 @@ export default function HomePage() {
         </h2>
         <div className="grid auto-rows-[minmax(170px,auto)] grid-flow-dense grid-cols-2 gap-3 md:grid-cols-6">
           <article data-bento className="group relative col-span-2 row-span-2 overflow-hidden rounded-3xl bg-[#0a0a0a] p-8 text-white md:col-span-3">
-            <div className="absolute inset-0 bg-cover bg-center opacity-30 grayscale transition-all duration-700 group-hover:scale-105 group-hover:opacity-40" style={{ backgroundImage: "url(https://picsum.photos/seed/welcome-host/900/900)" }} />
+            <div className="absolute inset-0 bg-cover bg-center opacity-30 grayscale transition-all duration-700 group-hover:scale-105 group-hover:opacity-40" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80)" }} />
             <div className="relative z-10 flex h-full flex-col justify-between">
               <MessageCircle className="size-8 text-[#fbbf24]" />
               <div>
@@ -162,7 +162,7 @@ export default function HomePage() {
       {/* Image scale + fade showcase */}
       <section className="mx-auto max-w-6xl px-6 pb-32 md:pb-48">
         <div data-showcase className="relative aspect-[16/9] overflow-hidden rounded-[2rem] border border-black/10">
-          <div className="absolute inset-0 bg-cover bg-center contrast-110" style={{ backgroundImage: "url(https://picsum.photos/seed/cozy-stay/1920/1080)" }} />
+          <div className="absolute inset-0 bg-cover bg-center contrast-110" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1920&q=80)" }} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <p className="font-display absolute bottom-8 left-8 max-w-md text-2xl font-bold text-white md:text-4xl">
             Hospedagem que parece profissional desde o primeiro contato.

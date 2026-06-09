@@ -29,7 +29,7 @@ export function Home({ title, whatsappUrl, onNavigate, onOpenSearch }: HomeProps
       <div className="bg-gaccent text-white px-6 pt-6 pb-12 rounded-b-[50px] shadow-2xl relative overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-luminosity"
-          style={{ backgroundImage: 'url(https://picsum.photos/seed/welcome-suite/1200/800)' }}
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80)' }}
         />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,transparent_0%,rgba(0,0,0,0.35)_90%)]" />
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-gsecondary/20 rounded-full blur-3xl"></div>
