@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { Playfair_Display } from 'next/font/google'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { pages } from '@/lib/db/schema'
@@ -7,7 +7,6 @@ import { GuestSite } from './_components/GuestSite'
 
 export const revalidate = 60
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-guest-sans' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-guest-serif' })
 
 async function getPage(slug: string) {
@@ -32,14 +31,14 @@ export default async function GuestPage({ params }: { params: Promise<{ slug: st
 
   if (page.status !== 'published') {
     return (
-      <div className={`${inter.variable} ${playfair.variable}`}>
+      <div className={playfair.variable}>
         <ComingSoon title={page.title} theme={page.theme} />
       </div>
     )
   }
 
   return (
-    <div className={`${inter.variable} ${playfair.variable}`}>
+    <div className={playfair.variable}>
       <GuestSite title={page.title} whatsapp={page.whatsapp} theme={page.theme} />
     </div>
   )
