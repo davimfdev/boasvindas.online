@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,33 +32,29 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Entrar</CardTitle>
-        <CardDescription>Acesse sua conta boasvindas.online</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pwd">Senha</Label>
-            <Input id="pwd" name="pwd" type="password" required />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Entrando…' : 'Entrar'}
-          </Button>
-          <p className="text-sm text-center text-muted-foreground">
-            Não tem conta?{' '}
-            <Link href="/cadastro" className="text-primary hover:underline">Cadastrar</Link>
-          </p>
-        </CardFooter>
+    <div>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-[#0a0a0a]">Bem-vindo de volta</h1>
+      <p className="mt-2 text-black/55">Acesse sua conta para gerenciar suas páginas.</p>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" required autoComplete="email" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="pwd">Senha</Label>
+          <Input id="pwd" name="pwd" type="password" required />
+        </div>
+        <Button type="submit" size="lg" className="w-full rounded-full" disabled={loading}>
+          {loading ? 'Entrando…' : 'Entrar'}
+        </Button>
       </form>
-    </Card>
+
+      <p className="mt-6 text-sm text-black/55">
+        Não tem conta?{' '}
+        <Link href="/cadastro" className="font-semibold text-[#0d9488] hover:underline">Cadastrar</Link>
+      </p>
+    </div>
   )
 }
