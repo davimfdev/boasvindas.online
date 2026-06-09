@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { NewPageDialog } from './_components/NewPageDialog'
+import { PublishToggle } from './_components/PublishToggle'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -44,12 +45,15 @@ export default async function DashboardPage() {
                   {page.status === 'published' ? 'Publicada' : 'Rascunho'}
                 </Badge>
               </CardHeader>
-              <CardContent className="flex items-center justify-between gap-2">
-                <span className="truncate font-mono text-sm text-muted-foreground">/{page.slug}</span>
-                <Button variant="outline" size="sm" render={<Link href={`/${page.slug}`} target="_blank" />}>
-                  <ExternalLink className="size-4" />
-                  Ver
-                </Button>
+              <CardContent className="space-y-3">
+                <span className="block truncate font-mono text-sm text-muted-foreground">/{page.slug}</span>
+                <div className="flex items-center gap-2">
+                  <PublishToggle pageId={page.id} published={page.status === 'published'} />
+                  <Button variant="outline" size="sm" render={<Link href={`/${page.slug}`} target="_blank" />}>
+                    <ExternalLink className="size-4" />
+                    Ver
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
