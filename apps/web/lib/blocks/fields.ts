@@ -63,6 +63,8 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
     { key: 'accessCode', label: 'Código de acesso', kind: 'text' },
     { key: 'instructions', label: 'Instruções', kind: 'textarea' },
   ],
+  // NOTE: a `list` field whose single itemFields entry has key '' means the array items are scalar
+  // strings (not objects) — the inspector edits the element value directly. See checkout.items.
   checkout: [
     { key: 'time', label: 'Horário', kind: 'text' },
     { key: 'items', label: 'Lista de saída', kind: 'list',
