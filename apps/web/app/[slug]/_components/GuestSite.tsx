@@ -6,6 +6,7 @@ import { X, MessageCircle, QrCode } from 'lucide-react'
 import type { PageContent, Section } from '@/lib/blocks/schema'
 import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
 import { Icon } from './blocks/Icon'
+import { blockFlexStyle } from '@/lib/blocks/layout'
 
 interface GuestSiteProps {
   title: string
@@ -16,9 +17,16 @@ interface GuestSiteProps {
 
 function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto flex flex-wrap items-start gap-x-3 gap-y-8">
       {section.blocks.map((b) => (
-        <BlockRenderer key={b.id} block={b} ctx={ctx} />
+        <div
+          key={b.id}
+          data-block={b.id}
+          style={blockFlexStyle(b.layout, b.type)}
+          className="overflow-auto max-md:!h-auto max-md:!w-full max-md:!overflow-visible"
+        >
+          <BlockRenderer block={b} ctx={ctx} />
+        </div>
       ))}
     </div>
   )
