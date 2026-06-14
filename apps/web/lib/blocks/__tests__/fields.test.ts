@@ -19,3 +19,9 @@ describe('block field config', () => {
     }
   })
 })
+
+describe('block min width', () => {
+  it.each(BLOCK_TYPES)('%s has a minW of sm or lg', (type) => {
+    expect(['sm', 'lg']).toContain(BLOCK_META[type].minW)
+  })
+})

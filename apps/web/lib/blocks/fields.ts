@@ -10,21 +10,21 @@ export interface FieldDef {
   itemFields?: { key: string; label: string; kind: FieldKind }[]
 }
 
-export const BLOCK_META: Record<BlockType, { label: string; group: 'Básico' | 'Hospedagem' | 'Utilidades'; icon: string }> = {
-  heading:   { label: 'Título',      group: 'Básico',     icon: 'Heading' },
-  text:      { label: 'Texto',       group: 'Básico',     icon: 'Type' },
-  image:     { label: 'Imagem',      group: 'Básico',     icon: 'Image' },
-  button:    { label: 'Botão',       group: 'Básico',     icon: 'MousePointerClick' },
-  divider:   { label: 'Divisor',     group: 'Básico',     icon: 'Minus' },
-  hero:      { label: 'Capa',        group: 'Hospedagem', icon: 'PanelTop' },
-  wifi:      { label: 'Wi-Fi',       group: 'Hospedagem', icon: 'Wifi' },
-  checkin:   { label: 'Check-in',    group: 'Hospedagem', icon: 'Key' },
-  checkout:  { label: 'Check-out',   group: 'Hospedagem', icon: 'LogOut' },
-  rules:     { label: 'Regras',      group: 'Hospedagem', icon: 'ClipboardList' },
-  guide:     { label: 'Guia Local',  group: 'Hospedagem', icon: 'MapPin' },
-  emergency: { label: 'Emergência',  group: 'Hospedagem', icon: 'PhoneCall' },
-  whatsapp:  { label: 'WhatsApp',    group: 'Utilidades', icon: 'MessageCircle' },
-  map:       { label: 'Mapa',        group: 'Utilidades', icon: 'Map' },
+export const BLOCK_META: Record<BlockType, { label: string; group: 'Básico' | 'Hospedagem' | 'Utilidades'; icon: string; minW: 'sm' | 'lg' }> = {
+  heading:   { label: 'Título',      group: 'Básico',     icon: 'Heading',             minW: 'sm' },
+  text:      { label: 'Texto',       group: 'Básico',     icon: 'Type',                minW: 'sm' },
+  image:     { label: 'Imagem',      group: 'Básico',     icon: 'Image',               minW: 'sm' },
+  button:    { label: 'Botão',       group: 'Básico',     icon: 'MousePointerClick',   minW: 'sm' },
+  divider:   { label: 'Divisor',     group: 'Básico',     icon: 'Minus',               minW: 'sm' },
+  hero:      { label: 'Capa',        group: 'Hospedagem', icon: 'PanelTop',            minW: 'lg' },
+  wifi:      { label: 'Wi-Fi',       group: 'Hospedagem', icon: 'Wifi',                minW: 'lg' },
+  checkin:   { label: 'Check-in',    group: 'Hospedagem', icon: 'Key',                 minW: 'lg' },
+  checkout:  { label: 'Check-out',   group: 'Hospedagem', icon: 'LogOut',              minW: 'lg' },
+  rules:     { label: 'Regras',      group: 'Hospedagem', icon: 'ClipboardList',       minW: 'lg' },
+  guide:     { label: 'Guia Local',  group: 'Hospedagem', icon: 'MapPin',              minW: 'lg' },
+  emergency: { label: 'Emergência',  group: 'Hospedagem', icon: 'PhoneCall',           minW: 'lg' },
+  whatsapp:  { label: 'WhatsApp',    group: 'Utilidades', icon: 'MessageCircle',       minW: 'sm' },
+  map:       { label: 'Mapa',        group: 'Utilidades', icon: 'Map',                 minW: 'sm' },
 }
 
 export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
