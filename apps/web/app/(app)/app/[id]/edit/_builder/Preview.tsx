@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -31,6 +31,8 @@ interface SortableBlockProps {
 function SortableBlock({ block, isSelected, whatsapp, containerRef, onSelect, onRemove, onLayout }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
+  useEffect(() => () => cleanupRef.current?.(), [])
 
   const setRefs = (el: HTMLDivElement | null) => {
     setNodeRef(el)
@@ -44,37 +46,29 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, onSelect, on
     opacity: isDragging ? 0.5 : 1,
   }
 
-  function startWidthResize(e: React.PointerEvent) {
-    e.stopPropagation()
-    e.preventDefault()
-    const container = containerRef.current
-    const wrapper = wrapperRef.current
-    if (!container || !wrapper) return
-    const containerW = container.getBoundingClientRect().width
-    const left = wrapper.getBoundingClientRect().left
-    const onMove = (ev: PointerEvent) => onLayout(block.id, { width: spanFromFraction(ev.clientX - left, containerW) })
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-  }
-
-  function startHeightResize(e: React.PointerEvent) {
+  function startResize(e: React.PointerEvent, axes: { width?: boolean; height?: boolean }) {
     e.stopPropagation()
     e.preventDefault()
     const wrapper = wrapperRef.current
     if (!wrapper) return
+    const containerW = containerRef.current?.getBoundingClientRect().width ?? 0
+    const left = wrapper.getBoundingClientRect().left
     const startY = e.clientY
     const startH = wrapper.getBoundingClientRect().height
-    const onMove = (ev: PointerEvent) => onLayout(block.id, { height: Math.max(40, Math.round(startH + ev.clientY - startY)) })
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
+    const onMove = (ev: PointerEvent) => {
+      const patch: Partial<NonNullable<Block['layout']>> = {}
+      if (axes.width) patch.width = spanFromFraction(ev.clientX - left, containerW)
+      if (axes.height) patch.height = Math.max(40, Math.round(startH + ev.clientY - startY))
+      onLayout(block.id, patch)
     }
+    const cleanup = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', cleanup)
+      cleanupRef.current = null
+    }
+    cleanupRef.current = cleanup
     window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointerup', cleanup)
   }
 
   return (
@@ -94,7 +88,7 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, onSelect, on
       role="group"
     >
       {/* Disable inner links/buttons during edit: clicks select the block, never navigate */}
-      <div className={['pointer-events-none select-none', block.layout?.height ? 'h-full overflow-auto' : ''].join(' ')}>
+      <div className={['pointer-events-none select-none', block.layout?.height ? 'h-full overflow-hidden' : ''].join(' ')}>
         <BlockRenderer block={block} ctx={{ whatsapp }} />
       </div>
 
@@ -114,21 +108,18 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, onSelect, on
           <div
             role="separator"
             aria-label="Redimensionar largura"
-            onPointerDown={startWidthResize}
+            onPointerDown={(e) => startResize(e, { width: true })}
             className="absolute right-0 top-0 z-20 h-full w-2 cursor-ew-resize hover:bg-[#0d9488]/30"
           />
           <div
             role="separator"
             aria-label="Redimensionar altura"
-            onPointerDown={startHeightResize}
+            onPointerDown={(e) => startResize(e, { height: true })}
             className="absolute bottom-0 left-0 z-20 h-2 w-full cursor-ns-resize hover:bg-[#0d9488]/30"
           />
           <div
             aria-label="Redimensionar largura e altura"
-            onPointerDown={(e) => {
-              startWidthResize(e)
-              startHeightResize(e)
-            }}
+            onPointerDown={(e) => startResize(e, { width: true, height: true })}
             className="absolute bottom-0 right-0 z-20 h-3 w-3 cursor-nwse-resize bg-[#0d9488]"
           />
         </>
