@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { pages } from './schema'
 import { pageContentSchema, type PageContent } from '@/lib/blocks/schema'
 import { DEFAULT_TEMPLATE } from '@/lib/blocks/templates'
@@ -9,7 +10,7 @@ export function resolvePageContent(content: unknown): PageContent {
   return parsed.success ? parsed.data : DEFAULT_TEMPLATE
 }
 
-export async function getPageBySlug(slug: string) {
+export const getPageBySlug = cache(async (slug: string) => {
   // NOTE: lazy imports avoid eager DATABASE_URL guard during module evaluation
   const { db } = await import('./index')
   const { eq } = await import('drizzle-orm')
@@ -20,4 +21,4 @@ export async function getPageBySlug(slug: string) {
   } catch (err) {
     throw new Error(`Failed to load page for slug "${slug}"`, { cause: err })
   }
-}
+})
