@@ -1,13 +1,65 @@
 'use client'
 
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { BlockRenderer } from '@/app/[slug]/_components/blocks/BlockRenderer'
 import { useBuilder } from './store'
 import type { BuilderStore } from './store'
+import type { Block } from '@/lib/blocks/schema'
 
 interface PreviewProps {
   store: BuilderStore
   theme: string
   whatsapp: string | null
+}
+
+interface SortableBlockProps {
+  block: Block
+  isSelected: boolean
+  whatsapp: string | null
+  onSelect: () => void
+  onRemove: () => void
+}
+
+function SortableBlock({ block, isSelected, whatsapp, onSelect, onRemove }: SortableBlockProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+  })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      role="group"
+      className={[
+        'group relative cursor-pointer transition-shadow',
+        isSelected
+          ? 'ring-2 ring-[#0d9488] ring-inset'
+          : 'hover:ring-1 hover:ring-[#0d9488]/40 hover:ring-inset',
+      ].join(' ')}
+      onClick={onSelect}
+      {...attributes}
+      {...listeners}
+    >
+      <BlockRenderer block={block} ctx={{ whatsapp }} />
+      <button
+        aria-label="Remover bloco"
+        className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-destructive/80 text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:!opacity-100 focus:!opacity-100"
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove()
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  )
 }
 
 export function Preview({ store, theme, whatsapp }: PreviewProps) {
@@ -17,6 +69,8 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
 
   const activeSection =
     content.sections.find((s) => s.id === activeSectionId) ?? content.sections[0]
+
+  const blockIds = activeSection.blocks.map((b) => b.id)
 
   return (
     <div className="flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-8">
@@ -29,34 +83,18 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
             Adicione blocos pelo painel à esquerda
           </p>
         ) : (
-          activeSection.blocks.map((block) => {
-            const isSelected = selectedBlockId === block.id
-            return (
-              <div
+          <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
+            {activeSection.blocks.map((block) => (
+              <SortableBlock
                 key={block.id}
-                role="group"
-                className={[
-                  'relative cursor-pointer transition-all',
-                  isSelected
-                    ? 'ring-2 ring-[#0d9488] ring-inset'
-                    : 'hover:ring-1 hover:ring-[#0d9488]/40 hover:ring-inset',
-                ].join(' ')}
-                onClick={() => store.getState().selectBlock(block.id)}
-              >
-                <BlockRenderer block={block} ctx={{ whatsapp }} />
-                <button
-                  aria-label="Remover bloco"
-                  className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-destructive/80 text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:!opacity-100 focus:!opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    store.getState().removeBlock(block.id)
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            )
-          })
+                block={block}
+                isSelected={selectedBlockId === block.id}
+                whatsapp={whatsapp}
+                onSelect={() => store.getState().selectBlock(block.id)}
+                onRemove={() => store.getState().removeBlock(block.id)}
+              />
+            ))}
+          </SortableContext>
         )}
       </div>
     </div>
