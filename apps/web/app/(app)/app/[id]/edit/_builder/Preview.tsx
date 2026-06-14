@@ -50,7 +50,10 @@ function SortableBlock({ block, isSelected, whatsapp, onSelect, onRemove }: Sort
       {...attributes}
       {...listeners}
     >
-      <BlockRenderer block={block} ctx={{ whatsapp }} />
+      {/* Disable inner links/buttons during edit: clicks select the block, never navigate */}
+      <div className="pointer-events-none select-none">
+        <BlockRenderer block={block} ctx={{ whatsapp }} />
+      </div>
       <button
         aria-label="Remover bloco"
         className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-destructive/80 text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:!opacity-100 focus:!opacity-100"
