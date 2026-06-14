@@ -36,4 +36,9 @@ describe('resolveTheme', () => {
     const r = resolveTheme({ preset: 'modern', headingFont: 'not-a-font' })
     expect(r.headingFont).toBe('space')
   })
+
+  it('rejects a body font passed as the heading override', () => {
+    const r = resolveTheme({ preset: 'modern', headingFont: 'inter' })
+    expect(r.headingFont).toBe('space')
+  })
 })
