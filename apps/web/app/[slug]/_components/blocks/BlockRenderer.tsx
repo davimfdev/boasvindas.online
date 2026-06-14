@@ -8,6 +8,11 @@ import { MapBlock } from './MapBlock'
 import { WhatsAppBlock } from './WhatsAppBlock'
 import { HeroBlock } from './HeroBlock'
 import { WifiBlock } from './WifiBlock'
+import { CheckInBlock } from './CheckInBlock'
+import { CheckOutBlock } from './CheckOutBlock'
+import { RulesBlock } from './RulesBlock'
+import { GuideBlock } from './GuideBlock'
+import { EmergencyBlock } from './EmergencyBlock'
 
 export interface RenderCtx {
   whatsapp: string | null
@@ -33,6 +38,11 @@ const REGISTRY: Partial<Record<BlockType, BlockComponent>> = {
   whatsapp: WhatsAppBlock,
   hero: HeroBlock,
   wifi: WifiBlock,
+  checkin: CheckInBlock,
+  checkout: CheckOutBlock,
+  rules: RulesBlock,
+  guide: GuideBlock,
+  emergency: EmergencyBlock,
 }
 
 export function BlockRenderer({ block, ctx }: { block: Block; ctx: RenderCtx }) {
