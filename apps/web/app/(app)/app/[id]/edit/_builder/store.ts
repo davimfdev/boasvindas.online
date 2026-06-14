@@ -15,6 +15,8 @@ export interface BuilderState {
   addBlock: (type: BlockType) => void
   updateBlockProps: (id: string, patch: Record<string, unknown>) => void
   setBlockLayout: (id: string, patch: Partial<NonNullable<Block['layout']>>) => void
+  setBlockLayoutLive: (id: string, patch: Partial<NonNullable<Block['layout']>>) => void
+  pushHistory: (snapshot: PageContent) => void
   removeBlock: (id: string) => void
   moveBlock: (id: string, toIndex: number) => void
   addSection: () => void
@@ -67,6 +69,17 @@ export function createBuilderStore(initial: PageContent) {
           if (b) { b.layout = { width: 12, ...b.layout, ...patch }; return }
         }
       }),
+      // Live layout update during a drag — no history snapshot (see pushHistory).
+      setBlockLayoutLive: (id, patch) => {
+        const next = clone(get().content)
+        for (const s of next.sections) {
+          const b = s.blocks.find((b) => b.id === id)
+          if (b) { b.layout = { width: 12, ...b.layout, ...patch }; break }
+        }
+        set({ content: next, dirty: true })
+      },
+      // Push one pre-drag snapshot so an entire drag is a single undo step.
+      pushHistory: (snapshot) => set({ past: [...get().past, snapshot].slice(-50), future: [] }),
       removeBlock: (id) => {
         const clearSel = get().selectedBlockId === id ? { selectedBlockId: null } : {}
         commit((c) => { for (const s of c.sections) s.blocks = s.blocks.filter((b) => b.id !== id) }, clearSel)

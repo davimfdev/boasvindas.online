@@ -88,4 +88,21 @@ describe('builder store', () => {
     store.getState().undo()
     expect(store.getState().content.sections[0].blocks[0].layout).toBeUndefined()
   })
+
+  it('setBlockLayoutLive updates layout without pushing history', () => {
+    const pastLen = store.getState().past.length
+    store.getState().setBlockLayoutLive('b1', { width: 6 })
+    expect(store.getState().content.sections[0].blocks[0].layout).toEqual({ width: 6 })
+    expect(store.getState().past.length).toBe(pastLen)
+    expect(store.getState().dirty).toBe(true)
+  })
+
+  it('pushHistory makes a live drag undoable in one step', () => {
+    const before = store.getState().content
+    store.getState().pushHistory(before)
+    store.getState().setBlockLayoutLive('b1', { width: 6 })
+    store.getState().setBlockLayoutLive('b1', { width: 3 })
+    store.getState().undo()
+    expect(store.getState().content.sections[0].blocks[0].layout).toBeUndefined()
+  })
 })
