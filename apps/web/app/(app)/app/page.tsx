@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ExternalLink, LayoutGrid } from 'lucide-react'
+import { ExternalLink, LayoutGrid, Hammer } from 'lucide-react'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     .orderBy(pages.createdAt)
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl font-extrabold tracking-tight text-[#0a0a0a]">Suas páginas</h1>
@@ -64,8 +64,12 @@ export default async function DashboardPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <PublishToggle pageId={page.id} published={page.status === 'published'} />
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/app/${page.id}/edit`} />}>
+                    <Hammer className="size-4" />
+                    Construir
+                  </Button>
                   <EditPageDialog page={page} />
-                  <Button variant="outline" size="sm" render={<Link href={`/${page.slug}`} target="_blank" />}>
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/${page.slug}`} target="_blank" />}>
                     <ExternalLink className="size-4" />
                     Ver
                   </Button>
