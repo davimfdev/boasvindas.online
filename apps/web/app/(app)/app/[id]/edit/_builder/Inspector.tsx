@@ -3,6 +3,7 @@
 import { BLOCK_FIELDS, BLOCK_META, type FieldDef } from '@/lib/blocks/fields'
 import type { BuilderStore } from './store'
 import { useBuilder } from './store'
+import { IconPicker } from './IconPicker'
 
 interface Props {
   store: BuilderStore
@@ -158,6 +159,21 @@ export function Inspector({ store }: Props) {
                     const obj = (item ?? {}) as Record<string, unknown>
                     const subVal = obj[subField.key]
                     const subId = `field-${blockId}-${field.key}-${i}-${subField.key}`
+                    const setSubValue = (val: string) => {
+                      const next = [...items]
+                      next[i] = { ...(obj as object), [subField.key]: val }
+                      setItems(next)
+                    }
+                    if (subField.kind === 'icon') {
+                      return (
+                        <IconPicker
+                          key={subField.key}
+                          label={subField.label}
+                          value={subVal === undefined || subVal === null ? '' : String(subVal)}
+                          onChange={setSubValue}
+                        />
+                      )
+                    }
                     return (
                       <div key={subField.key} className="flex flex-col gap-0.5">
                         <label htmlFor={subId} className="text-xs text-muted-foreground">
@@ -168,11 +184,7 @@ export function Inspector({ store }: Props) {
                           className="rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                           value={subVal === undefined || subVal === null ? '' : String(subVal)}
                           aria-label={subField.label}
-                          onChange={(e) => {
-                            const next = [...items]
-                            next[i] = { ...(obj as object), [subField.key]: e.target.value }
-                            setItems(next)
-                          }}
+                          onChange={(e) => setSubValue(e.target.value)}
                         />
                       </div>
                     )

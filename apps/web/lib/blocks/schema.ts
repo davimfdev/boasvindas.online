@@ -12,6 +12,10 @@ const safeHref = z.string().min(1).refine(
   { message: 'Unsafe URL scheme' },
 )
 
+// Inspector inputs emit '' when a field is cleared; treat that as "unset" for
+// optional URL fields so clearing them doesn't fail validation on save.
+const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional())
+
 export const headingBlock = z.object({ ...base, type: z.literal('heading'),
   props: z.object({ text: z.string(), level: z.union([z.literal(1), z.literal(2), z.literal(3)]) }) })
 
@@ -22,7 +26,7 @@ export const imageBlock = z.object({ ...base, type: z.literal('image'),
   props: z.object({ url: z.string().url(), alt: z.string().default(''), caption: z.string().optional() }) })
 
 export const buttonBlock = z.object({ ...base, type: z.literal('button'),
-  props: z.object({ label: z.string(), href: safeHref, kind: z.enum(['link', 'tel', 'whatsapp', 'map']).default('link') }) })
+  props: z.object({ label: z.string(), href: safeHref.or(z.literal('')), kind: z.enum(['link', 'tel', 'whatsapp', 'map']).default('link') }) })
 
 export const dividerBlock = z.object({ ...base, type: z.literal('divider'),
   props: z.object({ variant: z.enum(['line', 'spacer']).default('line') }) })
@@ -41,14 +45,14 @@ export const rulesBlock = z.object({ ...base, type: z.literal('rules'),
 
 export const guideBlock = z.object({ ...base, type: z.literal('guide'),
   props: z.object({ places: z.array(z.object({
-    name: z.string(), blurb: z.string().default(''), distance: z.string().optional(), mapUrl: z.string().url().optional(),
+    name: z.string(), blurb: z.string().default(''), distance: z.string().optional(), mapUrl: optionalUrl,
   })).default([]) }) })
 
 export const emergencyBlock = z.object({ ...base, type: z.literal('emergency'),
   props: z.object({ contacts: z.array(z.object({ label: z.string(), phone: z.string() })).default([]) }) })
 
 export const heroBlock = z.object({ ...base, type: z.literal('hero'),
-  props: z.object({ imageUrl: z.string().url().optional(), greeting: z.string(), propertyName: z.string() }) })
+  props: z.object({ imageUrl: optionalUrl, greeting: z.string(), propertyName: z.string() }) })
 
 export const whatsappBlock = z.object({ ...base, type: z.literal('whatsapp'),
   props: z.object({ number: z.string(), message: z.string().optional() }) })
