@@ -22,3 +22,16 @@ it('edits a wifi ssid through the store', () => {
   fireEvent.change(input, { target: { value: 'CasaNova' } })
   expect(store.getState().content.sections[0].blocks[0].props).toMatchObject({ ssid: 'CasaNova' })
 })
+
+it('picks a rules icon visually through the store', () => {
+  const rules: PageContent = { nav: 'buttons', sections: [
+    { id: 's1', title: 'Início', icon: 'Home', blocks: [
+      { id: 'r1', type: 'rules', props: { items: [{ icon: 'Ban', label: 'Não fumar' }] } } ] } ] }
+  const store = createBuilderStore(rules)
+  store.getState().selectBlock('r1')
+  render(<Inspector store={store} />)
+  fireEvent.click(screen.getByRole('button', { name: /^Ícone:/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Dog' }))
+  const items = store.getState().content.sections[0].blocks[0].props as { items: { icon: string }[] }
+  expect(items.items[0].icon).toBe('Dog')
+})
