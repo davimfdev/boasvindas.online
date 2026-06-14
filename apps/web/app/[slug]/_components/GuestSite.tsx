@@ -2,27 +2,32 @@
 
 import { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { ChevronLeft, Menu as MenuIcon, X, MessageCircle, Home as HomeIcon, Search as SearchIcon, QrCode } from 'lucide-react'
-import { MENU_ITEMS, type GuestSection } from './guest-data'
-import { SearchOverlay } from './SearchOverlay'
-import { Home } from './Home'
-import { Apartment } from './Apartment'
-import { CheckIn } from './CheckIn'
-import { Rules } from './Rules'
-import { LocalGuide } from './LocalGuide'
-import { CheckOut } from './CheckOut'
-import { Emergency } from './Emergency'
+import { X, MessageCircle, QrCode } from 'lucide-react'
+import type { PageContent, Section } from '@/lib/blocks/schema'
+import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
+import { Icon } from './blocks/Icon'
 
 interface GuestSiteProps {
   title: string
   whatsapp: string | null
   theme: string
+  content: PageContent
 }
 
-export function GuestSite({ title, whatsapp, theme }: GuestSiteProps) {
-  const [activeSection, setActiveSection] = useState<GuestSection>('home')
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
+  return (
+    <div className="w-full max-w-5xl mx-auto">
+      {section.blocks.map((b) => (
+        <BlockRenderer key={b.id} block={b} ctx={ctx} />
+      ))}
+    </div>
+  )
+}
+
+export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
+  const ctx: RenderCtx = { whatsapp }
+  // Safe non-null index: pageContentSchema enforces sections.min(1). Do not relax that guarantee.
+  const [activeSectionId, setActiveSectionId] = useState<string>(content.sections[0].id)
   const [isQrOpen, setIsQrOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [pageUrl, setPageUrl] = useState('')
@@ -40,92 +45,74 @@ export function GuestSite({ title, whatsapp, theme }: GuestSiteProps) {
     setPageUrl(window.location.href)
   }, [])
 
-  useEffect(() => {
-    window.scrollTo(0, 0)
-    setIsMenuOpen(false)
-  }, [activeSection])
-
-  const isHome = activeSection === 'home'
-  const currentTitle = MENU_ITEMS.find((item) => item.id === activeSection)?.title || title
-
-  function renderSection() {
-    switch (activeSection) {
-      case 'home': return <Home title={title} whatsappUrl={whatsappUrl} onNavigate={setActiveSection} onOpenSearch={() => setIsSearchOpen(true)} />
-      case 'apartment': return <Apartment />
-      case 'checkin': return <CheckIn />
-      case 'rules': return <Rules />
-      case 'local_guide': return <LocalGuide />
-      case 'checkout': return <CheckOut whatsapp={whatsapp} whatsappUrl={whatsappUrl} />
-      case 'emergency': return <Emergency />
-    }
-  }
+  const isButtonsNav = content.nav === 'buttons'
+  const activeSection =
+    content.sections.find((s) => s.id === activeSectionId) ?? content.sections[0]
 
   return (
-    <div data-theme={theme} className="guest-site min-h-screen flex flex-col bg-gbg text-gaccent-strong relative">
+    <div
+      data-theme={theme}
+      className="guest-site min-h-screen flex flex-col bg-gbg text-gaccent-strong relative"
+    >
       <header
-        className={`sticky top-0 z-50 px-5 py-4 flex items-center justify-center transition-all duration-300 border-b ${
-          isHome
-            ? scrolled ? 'bg-gaccent/95 backdrop-blur-md shadow-lg border-gaccent/20' : 'bg-gaccent border-transparent'
-            : 'bg-white/90 backdrop-blur-md shadow-md border-gray-100'
+        className={`sticky top-0 z-50 px-5 py-4 transition-all duration-300 border-b ${
+          scrolled
+            ? 'bg-white/90 backdrop-blur-md shadow-md border-gray-100'
+            : 'bg-white border-transparent'
         }`}
       >
-        <div className="w-full max-w-5xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {!isHome && (
-              <button
-                onClick={() => setActiveSection('home')}
-                className="p-1.5 hover:bg-teal-50 rounded-full transition-colors text-gaccent"
-                aria-label="Voltar para o início"
-              >
-                <ChevronLeft size={24} />
-              </button>
-            )}
-            <h1 className={`font-serif font-bold transition-all duration-300 flex flex-col items-start ${isHome ? 'text-gsecondary' : 'text-gaccent'}`}>
-              <span className={isHome ? 'text-xl' : 'text-lg'}>
-                {isHome ? title.toUpperCase() : currentTitle.toUpperCase()}
-              </span>
-              <span className={`text-[10px] tracking-[0.2em] font-black opacity-80 ${isHome ? 'text-white' : 'text-teal-400'}`}>
-                APTO 101
-              </span>
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsQrOpen(true)}
-              className={`p-2 rounded-full transition-colors ${isHome ? 'text-white hover:bg-white/10' : 'text-gaccent hover:bg-teal-50'}`}
-              aria-label="QR Code da página"
-            >
-              <QrCode size={24} />
-            </button>
-            <button
-              onClick={() => setIsSearchOpen(true)}
-              className={`p-2 rounded-full transition-colors ${isHome ? 'text-white hover:bg-white/10' : 'text-gaccent hover:bg-teal-50'}`}
-              aria-label="Pesquisar"
-            >
-              <SearchIcon size={24} />
-            </button>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`p-2 rounded-full transition-colors ${isHome ? 'text-white hover:bg-white/10' : 'text-gaccent hover:bg-teal-50'}`}
-              aria-label="Menu"
-            >
-              {isMenuOpen ? <X size={26} /> : <MenuIcon size={26} />}
-            </button>
-          </div>
+        <div className="w-full max-w-5xl mx-auto flex items-center justify-between gap-3">
+          <h1 className="font-serif font-bold text-gaccent text-lg shrink-0">
+            {title.toUpperCase()}
+          </h1>
+          <button
+            onClick={() => setIsQrOpen(true)}
+            className="p-2 rounded-full transition-colors text-gaccent hover:bg-teal-50 shrink-0"
+            aria-label="QR Code da página"
+          >
+            <QrCode size={24} />
+          </button>
         </div>
+
+        <nav aria-label="Seções" className="w-full max-w-5xl mx-auto mt-3 flex items-center gap-2 overflow-x-auto">
+          {content.sections.map((section) => {
+            const isActive = section.id === activeSectionId
+            const className = `whitespace-nowrap px-4 py-2 rounded-full transition-all flex items-center gap-2 text-sm font-bold ${
+              isActive
+                ? 'bg-gaccent text-gsecondary shadow-lg'
+                : 'text-gaccent-strong hover:bg-gbg'
+            }`
+            const inner = (
+              <>
+                <Icon name={section.icon} size={16} />
+                {section.title}
+              </>
+            )
+            return isButtonsNav ? (
+              <button
+                key={section.id}
+                onClick={() => setActiveSectionId(section.id)}
+                className={className}
+              >
+                {inner}
+              </button>
+            ) : (
+              <a key={section.id} href={`#${section.id}`} className={className}>
+                {inner}
+              </a>
+            )
+          })}
+        </nav>
       </header>
 
-      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigate={setActiveSection} />
-
       {isQrOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="qr-dialog-title">
           <div className="absolute inset-0 bg-gaccent-strong/60 backdrop-blur-sm" onClick={() => setIsQrOpen(false)} />
           <div className="relative bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-xs w-full animate-slideUp">
-            <button onClick={() => setIsQrOpen(false)} className="absolute top-4 right-4 text-gray-300 hover:text-gaccent" aria-label="Fechar">
+            <button autoFocus onClick={() => setIsQrOpen(false)} className="absolute top-4 right-4 text-gray-300 hover:text-gaccent" aria-label="Fechar">
               <X size={24} />
             </button>
-            <h2 className="font-serif font-bold text-lg text-gaccent">Acesse no celular</h2>
+            <h2 id="qr-dialog-title" className="font-serif font-bold text-lg text-gaccent">Acesse no celular</h2>
             <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-100">
               {pageUrl && <QRCodeSVG value={pageUrl} size={180} level="H" />}
             </div>
@@ -134,41 +121,14 @@ export function GuestSite({ title, whatsapp, theme }: GuestSiteProps) {
         </div>
       )}
 
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-[60] flex justify-end">
-          <div className="absolute inset-0 bg-gaccent-strong/60 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
-          <div className="relative w-full max-w-[350px] bg-white h-full shadow-2xl p-8 flex flex-col gap-8 animate-slideInRight">
-            <div className="flex justify-between items-center border-b pb-6 border-gray-100">
-              <h2 className="text-2xl font-serif font-bold text-gaccent">Menu</h2>
-              <button onClick={() => setIsMenuOpen(false)} className="text-gray-300 hover:text-gaccent"><X size={28} /></button>
-            </div>
-            <nav className="flex flex-col gap-3 overflow-y-auto">
-              <button
-                onClick={() => setActiveSection('home')}
-                className={`text-left p-4 rounded-2xl transition-all flex items-center gap-4 ${isHome ? 'bg-gaccent text-gsecondary font-bold shadow-lg' : 'text-gaccent-strong hover:bg-gbg'}`}
-              >
-                Início
-              </button>
-              {MENU_ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
-                  className={`text-left p-4 rounded-2xl transition-all flex items-center gap-4 ${activeSection === item.id ? 'bg-gaccent text-gsecondary font-bold shadow-lg' : 'text-gaccent-strong hover:bg-gbg'}`}
-                >
-                  <span className={`${activeSection === item.id ? 'text-gsecondary' : 'text-gaccent'} opacity-80`}>{item.icon}</span>
-                  {item.title}
-                </button>
-              ))}
-            </nav>
-            <div className="mt-auto pt-8 border-t border-gray-100 text-[10px] text-gray-400 text-center uppercase tracking-[0.2em] font-bold">
-              {title} • Cidade Digital, UF
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className="flex-1 overflow-x-hidden flex flex-col items-center">
-        <div className="w-full max-w-5xl">{renderSection()}</div>
+      <main className="flex-1 overflow-x-hidden flex flex-col items-center w-full">
+        {isButtonsNav
+          ? activeSection && <SectionView section={activeSection} ctx={ctx} />
+          : content.sections.map((section) => (
+              <section key={section.id} id={section.id} className="w-full flex flex-col items-center scroll-mt-24">
+                <SectionView section={section} ctx={ctx} />
+              </section>
+            ))}
       </main>
 
       <footer className="w-full bg-white border-t border-gray-100 py-12 px-6 mt-auto flex flex-col items-center">
@@ -196,7 +156,7 @@ export function GuestSite({ title, whatsapp, theme }: GuestSiteProps) {
         </div>
       </footer>
 
-      {whatsappUrl && activeSection !== 'emergency' && (
+      {whatsappUrl && (
         <a
           href={whatsappUrl}
           target="_blank"
@@ -206,16 +166,6 @@ export function GuestSite({ title, whatsapp, theme }: GuestSiteProps) {
         >
           <MessageCircle size={28} />
         </a>
-      )}
-
-      {!isHome && (
-        <button
-          onClick={() => setActiveSection('home')}
-          className="fixed bottom-8 left-8 bg-gaccent text-gsecondary p-5 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-40 border-4 border-white flex items-center justify-center animate-slideUp"
-          aria-label="Voltar ao início"
-        >
-          <HomeIcon size={28} />
-        </button>
       )}
     </div>
   )

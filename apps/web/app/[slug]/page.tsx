@@ -1,22 +1,15 @@
 import { notFound } from 'next/navigation'
 import { Playfair_Display } from 'next/font/google'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { pages } from '@/lib/db/schema'
+import { getPageBySlug } from '@/lib/db/queries'
 import { GuestSite } from './_components/GuestSite'
 
 export const revalidate = 60
 
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-guest-serif' })
 
-async function getPage(slug: string) {
-  const [page] = await db.select().from(pages).where(eq(pages.slug, slug)).limit(1)
-  return page ?? null
-}
-
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const page = await getPage(slug)
+  const page = await getPageBySlug(slug)
   if (!page) return {}
   return {
     title: `${page.title} — Boas-vindas`,
@@ -26,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function GuestPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const page = await getPage(slug)
+  const page = await getPageBySlug(slug)
   if (!page) notFound()
 
   if (page.status !== 'published') {
@@ -39,7 +32,7 @@ export default async function GuestPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className={playfair.variable}>
-      <GuestSite title={page.title} whatsapp={page.whatsapp} theme={page.theme} />
+      <GuestSite title={page.title} whatsapp={page.whatsapp} theme={page.theme} content={page.content} />
     </div>
   )
 }
