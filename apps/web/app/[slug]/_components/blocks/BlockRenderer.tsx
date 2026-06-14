@@ -1,5 +1,11 @@
 import type { Block, BlockType } from '@/lib/blocks/schema'
 import type { ComponentType } from 'react'
+import { TextBlock } from './TextBlock'
+import { ImageBlock } from './ImageBlock'
+import { ButtonBlock } from './ButtonBlock'
+import { DividerBlock } from './DividerBlock'
+import { MapBlock } from './MapBlock'
+import { WhatsAppBlock } from './WhatsAppBlock'
 
 export interface RenderCtx {
   whatsapp: string | null
@@ -10,13 +16,19 @@ type BlockComponent = ComponentType<{ block: Block; ctx: RenderCtx }>
 function HeadingBlock({ block }: { block: Block; ctx: RenderCtx }) {
   if (block.type !== 'heading') return null
   const { text, level } = block.props
-  const Tag = (`h${level}` as 'h1' | 'h2' | 'h3')
+  const Tag = `h${level}` as 'h1' | 'h2' | 'h3'
   return <Tag className="font-serif font-bold text-gaccent">{text}</Tag>
 }
 
 // Registry grows in Task 6 as each block type's real component is ported.
 const REGISTRY: Partial<Record<BlockType, BlockComponent>> = {
   heading: HeadingBlock,
+  text: TextBlock,
+  image: ImageBlock,
+  button: ButtonBlock,
+  divider: DividerBlock,
+  map: MapBlock,
+  whatsapp: WhatsAppBlock,
 }
 
 export function BlockRenderer({ block, ctx }: { block: Block; ctx: RenderCtx }) {
