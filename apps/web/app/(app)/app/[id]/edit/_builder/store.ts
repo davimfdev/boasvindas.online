@@ -14,6 +14,7 @@ export interface BuilderState {
   setActiveSection: (id: string) => void
   addBlock: (type: BlockType) => void
   updateBlockProps: (id: string, patch: Record<string, unknown>) => void
+  setBlockLayout: (id: string, patch: Partial<NonNullable<Block['layout']>>) => void
   removeBlock: (id: string) => void
   moveBlock: (id: string, toIndex: number) => void
   addSection: () => void
@@ -58,6 +59,12 @@ export function createBuilderStore(initial: PageContent) {
         for (const s of c.sections) {
           const b = s.blocks.find((b) => b.id === id)
           if (b) { (b as Block).props = { ...(b.props as object), ...patch } as Block['props']; return }
+        }
+      }),
+      setBlockLayout: (id, patch) => commit((c) => {
+        for (const s of c.sections) {
+          const b = s.blocks.find((b) => b.id === id)
+          if (b) { b.layout = { width: 12, ...b.layout, ...patch }; return }
         }
       }),
       removeBlock: (id) => {
