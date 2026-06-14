@@ -4,13 +4,7 @@ import { db } from '@/lib/db'
 import { pages } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-
-const updateSchema = z.object({
-  title:    z.string().min(2).max(100).optional(),
-  subtitle: z.string().max(200).optional().nullable(),
-  whatsapp: z.string().optional().nullable(),
-  theme:    z.enum(['modern', 'rustic']).optional(),
-})
+import { updateSchema } from './update-schema'
 
 async function getOwned(id: string, userId: string) {
   const [page] = await db

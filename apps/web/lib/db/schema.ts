@@ -1,4 +1,5 @@
-import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import type { PageContent } from '@/lib/blocks/schema'
 
 export const users = pgTable('users', {
   id:           uuid('id').primaryKey().defaultRandom(),
@@ -17,6 +18,7 @@ export const pages = pgTable('pages', {
   subtitle:  text('subtitle'),
   status:    text('status').notNull().default('draft'),
   theme:     text('theme').notNull().default('modern'),
+  content:   jsonb('content').$type<PageContent>(),
   whatsapp:  text('whatsapp'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
