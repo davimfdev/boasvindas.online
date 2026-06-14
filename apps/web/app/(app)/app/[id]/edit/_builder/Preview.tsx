@@ -1,5 +1,6 @@
 'use client'
 
+import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { BlockRenderer } from '@/app/[slug]/_components/blocks/BlockRenderer'
@@ -36,7 +37,6 @@ function SortableBlock({ block, isSelected, whatsapp, onSelect, onRemove }: Sort
     <div
       ref={setNodeRef}
       style={style}
-      role="group"
       className={[
         'group relative cursor-pointer transition-shadow',
         isSelected
@@ -71,12 +71,17 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
     content.sections.find((s) => s.id === activeSectionId) ?? content.sections[0]
 
   const blockIds = activeSection.blocks.map((b) => b.id)
+  const { setNodeRef, isOver } = useDroppable({ id: 'preview-dropzone' })
 
   return (
     <div className="flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-8">
       <div
+        ref={setNodeRef}
         data-theme={theme}
-        className="guest-site relative w-full max-w-[420px] rounded-[2rem] shadow-2xl bg-background overflow-hidden"
+        className={[
+          'guest-site relative w-full max-w-[420px] rounded-[2rem] shadow-2xl bg-background overflow-hidden',
+          isOver ? 'ring-2 ring-[#0d9488]' : '',
+        ].join(' ')}
       >
         {activeSection.blocks.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">
