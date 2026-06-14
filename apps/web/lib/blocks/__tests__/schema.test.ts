@@ -34,7 +34,24 @@ describe('pageContentSchema', () => {
   })
 
   it('rejects an invalid nav style', () => {
-    const result = pageContentSchema.safeParse({ nav: 'carousel', sections: [] })
+    const result = pageContentSchema.safeParse({ nav: 'carousel', sections: [{ id: 's1', title: 'x', icon: 'Home', blocks: [] }] })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('buttonBlock href safety', () => {
+  it('accepts a button block with a normal href', () => {
+    const r = blockSchema.safeParse({ id: 'b1', type: 'button', props: { label: 'Maps', href: 'https://maps.example.com', kind: 'map' } })
+    expect(r.success).toBe(true)
+  })
+
+  it('rejects a button block with a javascript: href', () => {
+    const r = blockSchema.safeParse({ id: 'b1', type: 'button', props: { label: 'x', href: 'javascript:alert(1)' } })
+    expect(r.success).toBe(false)
+  })
+
+  it('rejects a button block with a whitespace-padded javascript: href', () => {
+    const r = blockSchema.safeParse({ id: 'b1', type: 'button', props: { label: 'x', href: '  JavaScript:alert(1)' } })
+    expect(r.success).toBe(false)
   })
 })
