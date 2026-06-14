@@ -26,7 +26,7 @@ function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
 
 export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
   const ctx: RenderCtx = { whatsapp }
-  const [activeSectionId, setActiveSectionId] = useState(content.sections[0]?.id)
+  const [activeSectionId, setActiveSectionId] = useState<string>(content.sections[0].id)
   const [isQrOpen, setIsQrOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [pageUrl, setPageUrl] = useState('')
@@ -52,7 +52,6 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
     <div
       data-theme={theme}
       className="guest-site min-h-screen flex flex-col bg-gbg text-gaccent-strong relative"
-      style={isButtonsNav ? undefined : { scrollBehavior: 'smooth' }}
     >
       <header
         className={`sticky top-0 z-50 px-5 py-4 transition-all duration-300 border-b ${
@@ -74,7 +73,7 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
           </button>
         </div>
 
-        <nav className="w-full max-w-5xl mx-auto mt-3 flex items-center gap-2 overflow-x-auto">
+        <nav aria-label="Seções" className="w-full max-w-5xl mx-auto mt-3 flex items-center gap-2 overflow-x-auto">
           {content.sections.map((section) => {
             const isActive = section.id === activeSectionId
             const className = `whitespace-nowrap px-4 py-2 rounded-full transition-all flex items-center gap-2 text-sm font-bold ${
@@ -106,13 +105,13 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
       </header>
 
       {isQrOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="qr-dialog-title">
           <div className="absolute inset-0 bg-gaccent-strong/60 backdrop-blur-sm" onClick={() => setIsQrOpen(false)} />
           <div className="relative bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-xs w-full animate-slideUp">
-            <button onClick={() => setIsQrOpen(false)} className="absolute top-4 right-4 text-gray-300 hover:text-gaccent" aria-label="Fechar">
+            <button autoFocus onClick={() => setIsQrOpen(false)} className="absolute top-4 right-4 text-gray-300 hover:text-gaccent" aria-label="Fechar">
               <X size={24} />
             </button>
-            <h2 className="font-serif font-bold text-lg text-gaccent">Acesse no celular</h2>
+            <h2 id="qr-dialog-title" className="font-serif font-bold text-lg text-gaccent">Acesse no celular</h2>
             <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-100">
               {pageUrl && <QRCodeSVG value={pageUrl} size={180} level="H" />}
             </div>
