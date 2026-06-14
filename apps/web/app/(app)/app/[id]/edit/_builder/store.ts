@@ -30,11 +30,13 @@ const clone = (c: PageContent): PageContent => structuredClone(c)
 
 export function createBuilderStore(initial: PageContent) {
   return createStore<BuilderState>((set, get) => {
-    const commit = (fn: (draft: PageContent) => void) => {
+    const commit = (fn: (draft: PageContent) => void, extra: Partial<BuilderState> = {}) => {
       const prev = get().content
       const next = clone(prev)
       fn(next)
-      set({ content: next, past: [...get().past, prev], future: [], dirty: true })
+      const past = [...get().past, prev]
+      // cap history to avoid unbounded growth (every keystroke snapshots content)
+      set({ content: next, past: past.slice(-50), future: [], dirty: true, ...extra })
     }
     const activeSection = (c: PageContent, id: string) => c.sections.find((s) => s.id === id)!
 
@@ -59,8 +61,8 @@ export function createBuilderStore(initial: PageContent) {
         }
       }),
       removeBlock: (id) => {
-        commit((c) => { for (const s of c.sections) s.blocks = s.blocks.filter((b) => b.id !== id) })
-        if (get().selectedBlockId === id) set({ selectedBlockId: null })
+        const clearSel = get().selectedBlockId === id ? { selectedBlockId: null } : {}
+        commit((c) => { for (const s of c.sections) s.blocks = s.blocks.filter((b) => b.id !== id) }, clearSel)
       },
       moveBlock: (id, toIndex) => commit((c) => {
         const s = activeSection(c, get().activeSectionId)
@@ -71,17 +73,19 @@ export function createBuilderStore(initial: PageContent) {
       }),
       addSection: () => {
         const section = createSection()
-        commit((c) => { c.sections.push(section) })
-        set({ activeSectionId: section.id, selectedBlockId: null })
+        commit((c) => { c.sections.push(section) }, { activeSectionId: section.id, selectedBlockId: null })
       },
       renameSection: (id, title, icon) => commit((c) => {
         const s = c.sections.find((s) => s.id === id)
         if (s) { s.title = title; if (icon) s.icon = icon }
       }),
+      // active-section fallback: if the deleted section was active, fall back to the first
+      // surviving section (remaining[0] is safe — the length <= 1 guard ensures at least one remains)
       removeSection: (id) => {
         if (get().content.sections.length <= 1) return
-        commit((c) => { c.sections = c.sections.filter((s) => s.id !== id) })
-        if (get().activeSectionId === id) set({ activeSectionId: get().content.sections[0].id })
+        const remaining = get().content.sections.filter((s) => s.id !== id)
+        const extra = get().activeSectionId === id ? { activeSectionId: remaining[0].id } : {}
+        commit((c) => { c.sections = c.sections.filter((s) => s.id !== id) }, extra)
       },
       moveSection: (id, toIndex) => commit((c) => {
         const from = c.sections.findIndex((s) => s.id === id)
