@@ -38,4 +38,7 @@ describe('spanFromFraction', () => {
   it('clamps an over-wide drag to span 12', () => {
     expect(spanFromFraction(2000, 1000)).toBe(12)
   })
+  it('returns full span when the container has no width', () => {
+    expect(spanFromFraction(100, 0)).toBe(12)
+  })
 })
