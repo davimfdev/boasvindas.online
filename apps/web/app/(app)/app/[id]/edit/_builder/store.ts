@@ -24,6 +24,7 @@ export interface BuilderState {
   removeSection: (id: string) => void
   moveSection: (id: string, toIndex: number) => void
   setNav: (nav: PageContent['nav']) => void
+  setTheme: (patch: Partial<NonNullable<PageContent['theme']>>) => void
   undo: () => void
   redo: () => void
   markSaved: () => void
@@ -114,6 +115,13 @@ export function createBuilderStore(initial: PageContent) {
         c.sections.splice(toIndex, 0, moved)
       }),
       setNav: (nav) => commit((c) => { c.nav = nav }),
+      setTheme: (patch) => commit((c) => {
+        const base = c.theme ?? { preset: 'modern' }
+        const next = { ...base, ...patch }
+        // colors is a partial override: deep-merge when patching, clear when patch passes undefined
+        if (patch.colors !== undefined) next.colors = { ...base.colors, ...patch.colors }
+        c.theme = next
+      }),
       undo: () => {
         const { past, content, future } = get()
         if (past.length === 0) return
