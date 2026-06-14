@@ -64,12 +64,12 @@ export default async function DashboardPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <PublishToggle pageId={page.id} published={page.status === 'published'} />
-                  <Button variant="outline" size="sm" render={<Link href={`/app/${page.id}/edit`} />}>
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/app/${page.id}/edit`} />}>
                     <Hammer className="size-4" />
                     Construir
                   </Button>
                   <EditPageDialog page={page} />
-                  <Button variant="outline" size="sm" render={<Link href={`/${page.slug}`} target="_blank" />}>
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/${page.slug}`} target="_blank" />}>
                     <ExternalLink className="size-4" />
                     Ver
                   </Button>
