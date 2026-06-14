@@ -26,6 +26,7 @@ function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
 
 export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
   const ctx: RenderCtx = { whatsapp }
+  // Safe non-null index: pageContentSchema enforces sections.min(1). Do not relax that guarantee.
   const [activeSectionId, setActiveSectionId] = useState<string>(content.sections[0].id)
   const [isQrOpen, setIsQrOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
