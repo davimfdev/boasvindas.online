@@ -1,4 +1,3 @@
-import { eq, and } from 'drizzle-orm'
 import { pages } from './schema'
 import { pageContentSchema, type PageContent } from '@/lib/blocks/schema'
 import { DEFAULT_TEMPLATE } from '@/lib/blocks/templates'
@@ -10,14 +9,15 @@ export function resolvePageContent(content: unknown): PageContent {
   return parsed.success ? parsed.data : DEFAULT_TEMPLATE
 }
 
-export async function getPublishedPageBySlug(slug: string) {
-  // NOTE: lazy import avoids eager DATABASE_URL guard during module evaluation
+export async function getPageBySlug(slug: string) {
+  // NOTE: lazy imports avoid eager DATABASE_URL guard during module evaluation
   const { db } = await import('./index')
-  const [page] = await db
-    .select()
-    .from(pages)
-    .where(and(eq(pages.slug, slug), eq(pages.status, 'published')))
-    .limit(1)
-  if (!page) return null
-  return { ...page, content: resolvePageContent(page.content) }
+  const { eq } = await import('drizzle-orm')
+  try {
+    const [page] = await db.select().from(pages).where(eq(pages.slug, slug)).limit(1)
+    if (!page) return null
+    return { ...page, content: resolvePageContent(page.content) }
+  } catch (err) {
+    throw new Error(`Failed to load page for slug "${slug}"`, { cause: err })
+  }
 }
