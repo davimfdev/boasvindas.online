@@ -23,12 +23,12 @@ interface SortableBlockProps {
   isSelected: boolean
   whatsapp: string | null
   containerRef: React.RefObject<HTMLDivElement | null>
+  store: BuilderStore
   onSelect: () => void
   onRemove: () => void
-  onLayout: (id: string, patch: Partial<NonNullable<Block['layout']>>) => void
 }
 
-function SortableBlock({ block, isSelected, whatsapp, containerRef, onSelect, onRemove, onLayout }: SortableBlockProps) {
+function SortableBlock({ block, isSelected, whatsapp, containerRef, store, onSelect, onRemove }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -51,15 +51,18 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, onSelect, on
     e.preventDefault()
     const wrapper = wrapperRef.current
     if (!wrapper) return
+    const before = store.getState().content
+    let moved = false
     const containerW = containerRef.current?.getBoundingClientRect().width ?? 0
     const left = wrapper.getBoundingClientRect().left
     const startY = e.clientY
     const startH = wrapper.getBoundingClientRect().height
     const onMove = (ev: PointerEvent) => {
+      if (!moved) { moved = true; store.getState().pushHistory(before) }
       const patch: Partial<NonNullable<Block['layout']>> = {}
       if (axes.width) patch.width = spanFromFraction(ev.clientX - left, containerW)
       if (axes.height) patch.height = Math.max(40, Math.round(startH + ev.clientY - startY))
-      onLayout(block.id, patch)
+      store.getState().setBlockLayoutLive(block.id, patch)
     }
     const cleanup = () => {
       window.removeEventListener('pointermove', onMove)
@@ -164,9 +167,9 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
                   isSelected={selectedBlockId === block.id}
                   whatsapp={whatsapp}
                   containerRef={containerRef}
+                  store={store}
                   onSelect={() => store.getState().selectBlock(block.id)}
                   onRemove={() => store.getState().removeBlock(block.id)}
-                  onLayout={(id, patch) => store.getState().setBlockLayout(id, patch)}
                 />
               ))}
             </div>
