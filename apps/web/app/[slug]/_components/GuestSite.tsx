@@ -142,17 +142,17 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
               <section
                 key={section.id}
                 id={section.id}
-                className="w-full flex flex-col items-center justify-start min-h-[100svh] scroll-mt-24 snap-start py-12"
+                className="w-full flex flex-col items-center justify-start scroll-mt-24 snap-start py-10"
               >
                 <SectionView section={section} ctx={ctx} />
               </section>
             ))}
       </main>
 
-      <footer className="w-full bg-white border-t border-gray-100 py-12 px-6 mt-auto flex flex-col items-center">
-        <div className="w-full max-w-5xl flex flex-col items-center text-center gap-6">
-          <div className="flex flex-col gap-1">
-            <p className="text-gaccent font-serif font-bold text-xl uppercase tracking-tight">{title}</p>
+      <footer className="w-full bg-white border-t border-gray-100 py-6 px-6 mt-auto flex flex-col items-center snap-start">
+        <div className="w-full max-w-5xl flex flex-col items-center text-center gap-4">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-gaccent font-serif font-bold text-lg uppercase tracking-tight">{title}</p>
             <p className="text-gray-400 text-[10px] uppercase tracking-[0.2em] font-black">Anfitrião Profissional</p>
           </div>
 
@@ -168,7 +168,7 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
             </a>
           )}
 
-          <div className="pt-8 border-t border-gray-50 w-full text-[9px] text-gray-300 uppercase tracking-[0.4em] font-black">
+          <div className="pt-4 border-t border-gray-50 w-full text-[9px] text-gray-300 uppercase tracking-[0.4em] font-black">
             {title} • Feito com boasvindas.online
           </div>
         </div>
