@@ -7,6 +7,7 @@ export const MIN_W_PX = { sm: 140, lg: 300 } as const
 export function blockFlexStyle(layout: Block['layout'], type: BlockType): CSSProperties {
   const width = layout?.width ?? 12
   const pct = (width / 12) * 100
+  // NOTE: the 0.75rem subtraction must match the flex container's column gap (gap-x-3) in Preview/GuestSite.
   return {
     flexBasis: width >= 12 ? '100%' : `calc(${pct}% - 0.75rem)`,
     minWidth: MIN_W_PX[BLOCK_META[type].minW],
