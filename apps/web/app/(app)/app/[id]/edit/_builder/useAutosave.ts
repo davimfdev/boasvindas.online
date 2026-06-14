@@ -40,7 +40,11 @@ export function useAutosave(pageId: string, content: PageContent, dirty: boolean
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: c }),
       })
-      if (!res.ok) throw new Error('save failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        console.error('Autosave falhou:', res.status, body?.error ?? res.statusText)
+        throw new Error('save failed')
+      }
       onSaved()
     },
     onStatus: setStatus,

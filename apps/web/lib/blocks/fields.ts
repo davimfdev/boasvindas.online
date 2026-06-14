@@ -1,6 +1,6 @@
 import type { BlockType } from './schema'
 
-export type FieldKind = 'text' | 'textarea' | 'number' | 'select' | 'list'
+export type FieldKind = 'text' | 'textarea' | 'number' | 'select' | 'list' | 'icon'
 
 export interface FieldDef {
   key: string
@@ -72,7 +72,7 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   ],
   rules: [
     { key: 'items', label: 'Regras', kind: 'list', itemFields: [
-      { key: 'icon', label: 'Ícone (lucide)', kind: 'text' },
+      { key: 'icon', label: 'Ícone', kind: 'icon' },
       { key: 'label', label: 'Regra', kind: 'text' } ] },
   ],
   guide: [
