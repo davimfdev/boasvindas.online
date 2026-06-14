@@ -175,6 +175,11 @@
   to { transform: translateX(-50%); }
 }
 
+/* Smooth scroll for guest landing pages — respects reduced-motion preference */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
 /* Guest landing page — scoped visual world (ported from apartamento-x demo) */
 .guest-site {
   /* Modern theme (default): teal + amber, Cabinet Grotesk headings */
