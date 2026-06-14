@@ -6,6 +6,8 @@ import { ButtonBlock } from './ButtonBlock'
 import { DividerBlock } from './DividerBlock'
 import { MapBlock } from './MapBlock'
 import { WhatsAppBlock } from './WhatsAppBlock'
+import { HeroBlock } from './HeroBlock'
+import { WifiBlock } from './WifiBlock'
 
 export interface RenderCtx {
   whatsapp: string | null
@@ -29,6 +31,8 @@ const REGISTRY: Partial<Record<BlockType, BlockComponent>> = {
   divider: DividerBlock,
   map: MapBlock,
   whatsapp: WhatsAppBlock,
+  hero: HeroBlock,
+  wifi: WifiBlock,
 }
 
 export function BlockRenderer({ block, ctx }: { block: Block; ctx: RenderCtx }) {
