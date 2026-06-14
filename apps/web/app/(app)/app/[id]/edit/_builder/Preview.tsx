@@ -22,6 +22,8 @@ interface SortableBlockProps {
   onRemove: () => void
 }
 
+const FULL_BLEED: ReadonlySet<Block['type']> = new Set(['hero', 'image', 'divider', 'map'])
+
 function SortableBlock({ block, isSelected, whatsapp, onSelect, onRemove }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
@@ -39,6 +41,7 @@ function SortableBlock({ block, isSelected, whatsapp, onSelect, onRemove }: Sort
       style={style}
       className={[
         'group relative cursor-pointer transition-shadow',
+        FULL_BLEED.has(block.type) ? '' : 'px-5',
         isSelected
           ? 'ring-2 ring-[#0d9488] ring-inset'
           : 'hover:ring-1 hover:ring-[#0d9488]/40 hover:ring-inset',
@@ -74,12 +77,12 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
   const { setNodeRef, isOver } = useDroppable({ id: 'preview-dropzone' })
 
   return (
-    <div className="flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-8">
+    <div className="flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-6">
       <div
         ref={setNodeRef}
         data-theme={theme}
         className={[
-          'guest-site relative w-full max-w-[420px] rounded-[2rem] shadow-2xl bg-background overflow-hidden',
+          'guest-site relative w-full max-w-3xl rounded-2xl shadow-2xl bg-background overflow-hidden',
           isOver ? 'ring-2 ring-[#0d9488]' : '',
         ].join(' ')}
       >
@@ -89,16 +92,18 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
           </p>
         ) : (
           <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
-            {activeSection.blocks.map((block) => (
-              <SortableBlock
-                key={block.id}
-                block={block}
-                isSelected={selectedBlockId === block.id}
-                whatsapp={whatsapp}
-                onSelect={() => store.getState().selectBlock(block.id)}
-                onRemove={() => store.getState().removeBlock(block.id)}
-              />
-            ))}
+            <div className="flex flex-col gap-8 pb-8">
+              {activeSection.blocks.map((block) => (
+                <SortableBlock
+                  key={block.id}
+                  block={block}
+                  isSelected={selectedBlockId === block.id}
+                  whatsapp={whatsapp}
+                  onSelect={() => store.getState().selectBlock(block.id)}
+                  onRemove={() => store.getState().removeBlock(block.id)}
+                />
+              ))}
+            </div>
           </SortableContext>
         )}
       </div>
