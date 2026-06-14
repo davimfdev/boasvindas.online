@@ -70,4 +70,22 @@ describe('builder store', () => {
     store.getState().markSaved()
     expect(store.getState().dirty).toBe(false)
   })
+
+  it('setBlockLayout sets width and marks dirty', () => {
+    store.getState().setBlockLayout('b1', { width: 6 })
+    expect(store.getState().content.sections[0].blocks[0].layout).toEqual({ width: 6 })
+    expect(store.getState().dirty).toBe(true)
+  })
+
+  it('setBlockLayout merges height onto an existing width', () => {
+    store.getState().setBlockLayout('b1', { width: 6 })
+    store.getState().setBlockLayout('b1', { height: 220 })
+    expect(store.getState().content.sections[0].blocks[0].layout).toEqual({ width: 6, height: 220 })
+  })
+
+  it('setBlockLayout is undoable', () => {
+    store.getState().setBlockLayout('b1', { width: 4 })
+    store.getState().undo()
+    expect(store.getState().content.sections[0].blocks[0].layout).toBeUndefined()
+  })
 })
