@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { X, MessageCircle, QrCode } from 'lucide-react'
 import type { PageContent, Section } from '@/lib/blocks/schema'
 import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
 import { Icon } from './blocks/Icon'
+import { blockFlexStyle } from '@/lib/blocks/layout'
 
 interface GuestSiteProps {
   title: string
@@ -16,9 +17,16 @@ interface GuestSiteProps {
 
 function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto flex flex-wrap items-start gap-x-3 gap-y-8">
       {section.blocks.map((b) => (
-        <BlockRenderer key={b.id} block={b} ctx={ctx} />
+        <div
+          key={b.id}
+          data-block={b.id}
+          style={blockFlexStyle(b.layout, b.type)}
+          className="overflow-auto max-md:!h-auto max-md:!w-full max-md:!overflow-visible"
+        >
+          <BlockRenderer block={b} ctx={ctx} />
+        </div>
       ))}
     </div>
   )
@@ -31,14 +39,17 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
   const [isQrOpen, setIsQrOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [pageUrl, setPageUrl] = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const whatsappDigits = whatsapp?.replace(/\D/g, '') || ''
   const whatsappUrl = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    const el = scrollRef.current
+    if (!el) return
+    const handleScroll = () => setScrolled(el.scrollTop > 20)
+    el.addEventListener('scroll', handleScroll)
+    return () => el.removeEventListener('scroll', handleScroll)
   }, [])
 
   useEffect(() => {
@@ -51,8 +62,11 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
 
   return (
     <div
+      ref={scrollRef}
       data-theme={theme}
-      className="guest-site min-h-screen flex flex-col bg-gbg text-gaccent-strong relative"
+      className={`guest-site h-screen overflow-y-auto flex flex-col bg-gbg text-gaccent-strong relative ${
+        isButtonsNav ? '' : 'snap-y snap-mandatory'
+      }`}
     >
       <header
         className={`sticky top-0 z-50 px-5 py-4 transition-all duration-300 border-b ${
@@ -125,7 +139,11 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
         {isButtonsNav
           ? activeSection && <SectionView section={activeSection} ctx={ctx} />
           : content.sections.map((section) => (
-              <section key={section.id} id={section.id} className="w-full flex flex-col items-center scroll-mt-24">
+              <section
+                key={section.id}
+                id={section.id}
+                className="w-full flex flex-col items-center justify-start min-h-[100svh] scroll-mt-24 snap-start py-12"
+              >
                 <SectionView section={section} ctx={ctx} />
               </section>
             ))}

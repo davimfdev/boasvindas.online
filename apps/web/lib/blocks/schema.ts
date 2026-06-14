@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-const base = { id: z.string().min(1) }
+export const blockLayout = z.object({
+  width: z.number().int().min(1).max(12),
+  height: z.number().int().positive().optional(),
+}).optional()
+
+const base = { id: z.string().min(1), layout: blockLayout }
 
 const safeHref = z.string().min(1).refine(
   (v) => !/^\s*(javascript|data|vbscript):/i.test(v),
