@@ -29,4 +29,13 @@ describe('GuestSite', () => {
     render(<GuestSite title="Casa" whatsapp={null} theme="modern" content={content} />)
     expect(screen.queryByText('NetX')).not.toBeInTheDocument()
   })
+
+  it('applies the block span as a flex-basis on the guest page', () => {
+    const content: PageContent = { nav: 'onepage', sections: [
+      { id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'heading', props: { text: 'Olá', level: 1 }, layout: { width: 6 } } ] } ] }
+    const { container } = render(<GuestSite title="T" whatsapp={null} theme="modern" content={content} />)
+    const wrapper = container.querySelector('[data-block="b1"]') as HTMLElement
+    expect(wrapper.style.flexBasis).toBe('calc(50% - 0.75rem)')
+  })
 })
