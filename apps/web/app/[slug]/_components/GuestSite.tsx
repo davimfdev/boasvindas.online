@@ -134,7 +134,7 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
               <section
                 key={section.id}
                 id={section.id}
-                className="w-full flex flex-col items-center justify-center min-h-[100svh] scroll-mt-24 snap-start py-12"
+                className="w-full flex flex-col items-center justify-start min-h-[100svh] scroll-mt-24 snap-start py-12"
               >
                 <SectionView section={section} ctx={ctx} />
               </section>
