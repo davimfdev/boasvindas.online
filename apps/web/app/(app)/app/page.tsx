@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     .orderBy(pages.createdAt)
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl font-extrabold tracking-tight text-[#0a0a0a]">Suas páginas</h1>
