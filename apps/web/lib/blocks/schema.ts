@@ -60,10 +60,17 @@ export const whatsappBlock = z.object({ ...base, type: z.literal('whatsapp'),
 export const mapBlock = z.object({ ...base, type: z.literal('map'),
   props: z.object({ query: z.string(), label: z.string().optional() }) })
 
+export const calloutBlock = z.object({ ...base, type: z.literal('callout'),
+  props: z.object({
+    variant: z.enum(['tip', 'info', 'warning']).default('tip'),
+    icon: z.string().default('Lightbulb'),
+    text: z.string(),
+  }) })
+
 export const blockSchema = z.discriminatedUnion('type', [
   headingBlock, textBlock, imageBlock, buttonBlock, dividerBlock,
   wifiBlock, checkinBlock, checkoutBlock, rulesBlock, guideBlock,
-  emergencyBlock, heroBlock, whatsappBlock, mapBlock,
+  emergencyBlock, heroBlock, whatsappBlock, mapBlock, calloutBlock,
 ])
 
 export const sectionSchema = z.object({
