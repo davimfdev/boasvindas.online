@@ -25,6 +25,10 @@ export const BLOCK_META: Record<BlockType, { label: string; group: 'Básico' | '
   emergency: { label: 'Emergência',  group: 'Hospedagem', icon: 'PhoneCall',           minW: 'lg' },
   whatsapp:  { label: 'WhatsApp',    group: 'Utilidades', icon: 'MessageCircle',       minW: 'sm' },
   map:       { label: 'Mapa',        group: 'Utilidades', icon: 'Map',                 minW: 'sm' },
+  callout:   { label: 'Dica',        group: 'Básico',     icon: 'Lightbulb',           minW: 'sm' },
+  accordion: { label: 'Sanfona',     group: 'Básico',     icon: 'ChevronsUpDown',      minW: 'lg' },
+  linkcard:  { label: 'Card',        group: 'Básico',     icon: 'SquareStack',         minW: 'lg' },
+  carousel:  { label: 'Carrossel',   group: 'Básico',     icon: 'GalleryHorizontal',   minW: 'lg' },
 }
 
 export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
@@ -94,5 +98,31 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   map: [
     { key: 'query', label: 'Endereço / busca', kind: 'text' },
     { key: 'label', label: 'Rótulo do botão', kind: 'text' },
+  ],
+  callout: [
+    { key: 'variant', label: 'Estilo', kind: 'select', options: [
+      { value: 'tip', label: 'Dica' }, { value: 'info', label: 'Informação' }, { value: 'warning', label: 'Aviso' } ] },
+    { key: 'icon', label: 'Ícone', kind: 'icon' },
+    { key: 'text', label: 'Texto', kind: 'textarea' },
+  ],
+  accordion: [
+    { key: 'items', label: 'Itens', kind: 'list', itemFields: [
+      { key: 'icon', label: 'Ícone', kind: 'icon' },
+      { key: 'title', label: 'Título', kind: 'text' },
+      { key: 'summary', label: 'Resumo', kind: 'text' },
+      { key: 'body', label: 'Detalhes', kind: 'textarea' } ] },
+  ],
+  linkcard: [
+    { key: 'title', label: 'Título', kind: 'text' },
+    { key: 'text', label: 'Texto', kind: 'textarea' },
+    { key: 'links', label: 'Links', kind: 'list', itemFields: [
+      { key: 'label', label: 'Rótulo', kind: 'text' },
+      { key: 'href', label: 'Destino', kind: 'text' } ] },
+  ],
+  carousel: [
+    { key: 'images', label: 'Imagens', kind: 'list', itemFields: [
+      { key: 'url', label: 'URL da imagem', kind: 'text' },
+      { key: 'alt', label: 'Descrição (alt)', kind: 'text' },
+      { key: 'caption', label: 'Legenda', kind: 'text' } ] },
   ],
 }
