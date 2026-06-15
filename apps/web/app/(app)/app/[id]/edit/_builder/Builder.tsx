@@ -74,6 +74,7 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
           <button
             type="button"
             onClick={() => setShowTheme((v) => !v)}
+            aria-pressed={showTheme}
             className="flex items-center gap-1 text-[#0d9488] hover:underline"
           >
             <PaletteIcon className="size-4" />
@@ -96,7 +97,7 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
       <SectionTabs store={store} />
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-[200px_1fr_280px]">
+        <div className={`grid flex-1 grid-cols-1 overflow-hidden ${showTheme ? 'md:grid-cols-[200px_1fr_280px_18rem]' : 'md:grid-cols-[200px_1fr_280px]'}`}>
           <aside className="overflow-auto border-r border-border">
             <Palette store={store} />
           </aside>
