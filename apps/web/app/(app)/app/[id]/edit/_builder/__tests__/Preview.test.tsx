@@ -37,3 +37,22 @@ it('applies themed css vars on the preview frame', () => {
   const frame = container.querySelector('.guest-site') as HTMLElement
   expect(frame.style.getPropertyValue('--g-accent')).toBe('#5d4017')
 })
+
+it('hides the height handle on non-fillable blocks and shows it on media blocks', () => {
+  const content: PageContent = { nav: 'buttons', sections: [
+    { id: 's1', title: 'Início', icon: 'Home', blocks: [
+      { id: 'b1', type: 'text', props: { text: 'oi' } },
+      { id: 'b2', type: 'image', props: { url: 'https://x.com/a.jpg', alt: '' } } ] } ] }
+
+  const store1 = createBuilderStore(content)
+  store1.getState().selectBlock('b1')
+  const { unmount } = render(<Preview store={store1} theme="modern" whatsapp={null} />)
+  expect(screen.queryByLabelText('Redimensionar altura')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Redimensionar largura')).toBeInTheDocument()
+  unmount()
+
+  const store2 = createBuilderStore(content)
+  store2.getState().selectBlock('b2')
+  render(<Preview store={store2} theme="modern" whatsapp={null} />)
+  expect(screen.getByLabelText('Redimensionar altura')).toBeInTheDocument()
+})
