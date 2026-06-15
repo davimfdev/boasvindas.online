@@ -14,6 +14,7 @@ import { RulesBlock } from './RulesBlock'
 import { GuideBlock } from './GuideBlock'
 import { EmergencyBlock } from './EmergencyBlock'
 import { CalloutBlock } from './CalloutBlock'
+import { AccordionBlock } from './AccordionBlock'
 
 export interface RenderCtx {
   whatsapp: string | null
@@ -45,6 +46,7 @@ const REGISTRY: Partial<Record<BlockType, BlockComponent>> = {
   guide: GuideBlock,
   emergency: EmergencyBlock,
   callout: CalloutBlock,
+  accordion: AccordionBlock,
 }
 
 export function BlockRenderer({ block, ctx }: { block: Block; ctx: RenderCtx }) {
