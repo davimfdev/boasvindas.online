@@ -4,6 +4,9 @@ import { BLOCK_META } from './fields'
 
 export const MIN_W_PX = { sm: 140, lg: 300 } as const
 
+// Blocks whose media should stretch to fill an explicit layout.height box.
+export const FILLABLE_BLOCKS: ReadonlySet<string> = new Set(['hero', 'image', 'carousel'])
+
 export function blockFlexStyle(layout: Block['layout'], type: BlockType): CSSProperties {
   const width = layout?.width ?? 12
   const pct = (width / 12) * 100
