@@ -28,3 +28,12 @@ it('applies the span width as a flex-basis on the block wrapper', () => {
   const wrapper = container.querySelector('[role="group"]') as HTMLElement
   expect(wrapper.style.flexBasis).toBe('calc(50% - 0.75rem)')
 })
+
+it('applies themed css vars on the preview frame', () => {
+  const themed: PageContent = { nav: 'buttons', theme: { preset: 'rustic' }, sections: [
+    { id: 's1', title: 'Início', icon: 'Home', blocks: [
+      { id: 'b1', type: 'heading', props: { text: 'Oi', level: 1 } } ] } ] }
+  const { container } = render(<Preview store={createBuilderStore(themed)} theme="modern" whatsapp={null} />)
+  const frame = container.querySelector('.guest-site') as HTMLElement
+  expect(frame.style.getPropertyValue('--g-accent')).toBe('#5d4017')
+})
