@@ -18,7 +18,7 @@ const DEFAULT_PROPS: { [T in BlockType]: Extract<Block, { type: T }>['props'] } 
   checkin:   { time: '14:00', address: 'Endereço do imóvel', instructions: '' },
   checkout:  { time: '11:00', items: ['Feche as janelas'] },
   rules:     { items: [{ icon: 'Ban', label: 'Proibido fumar' }] },
-  guide:     { places: [{ name: 'Lugar', blurb: '' }] },
+  guide:     { places: [{ name: 'Lugar', blurb: '', tags: [] }] },
   emergency: { contacts: [{ label: 'Polícia', phone: '190' }] },
   hero:      { greeting: 'Seja bem-vindo!', propertyName: 'Meu imóvel' },
   whatsapp:  { number: '' },

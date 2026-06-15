@@ -46,6 +46,7 @@ export const rulesBlock = z.object({ ...base, type: z.literal('rules'),
 export const guideBlock = z.object({ ...base, type: z.literal('guide'),
   props: z.object({ places: z.array(z.object({
     name: z.string(), blurb: z.string().default(''), distance: z.string().optional(), mapUrl: optionalUrl,
+    tags: z.array(z.string()).default([]),
   })).default([]) }) })
 
 export const emergencyBlock = z.object({ ...base, type: z.literal('emergency'),

@@ -30,7 +30,7 @@ it('rules renders an item label', () => {
 })
 
 it('guide renders a place name and its map link', () => {
-  const b: Block = { id: '1', type: 'guide', props: { places: [{ name: 'Padaria Central', blurb: 'Pães frescos', distance: '200m', mapUrl: 'https://maps.test/p' }] } }
+  const b: Block = { id: '1', type: 'guide', props: { places: [{ name: 'Padaria Central', blurb: 'Pães frescos', distance: '200m', mapUrl: 'https://maps.test/p', tags: [] }] } }
   render(<BlockRenderer block={b} ctx={ctx} />)
   expect(screen.getByText('Padaria Central')).toBeInTheDocument()
   expect(screen.getByRole('link')).toHaveAttribute('href', 'https://maps.test/p')
