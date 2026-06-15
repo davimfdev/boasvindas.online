@@ -3,7 +3,7 @@ import type { Block, BlockType, Section } from './schema'
 export const BLOCK_TYPES = [
   'heading', 'text', 'image', 'button', 'divider',
   'wifi', 'checkin', 'checkout', 'rules', 'guide',
-  'emergency', 'hero', 'whatsapp', 'map', 'callout', 'accordion', 'linkcard',
+  'emergency', 'hero', 'whatsapp', 'map', 'callout', 'accordion', 'linkcard', 'carousel',
 ] as const satisfies readonly BlockType[]
 
 const id = () => crypto.randomUUID()
@@ -26,6 +26,7 @@ const DEFAULT_PROPS: { [T in BlockType]: Extract<Block, { type: T }>['props'] } 
   callout:   { variant: 'tip', icon: 'Lightbulb', text: 'Dica para o hóspede' },
   accordion: { items: [{ icon: 'Info', title: 'Item', summary: '', body: '' }] },
   linkcard:  { title: 'Card', text: '', links: [{ label: 'Link', href: 'https://' }] },
+  carousel:  { images: [{ url: 'https://placehold.co/800x500', alt: '', caption: '' }] },
 }
 
 export function createBlock(type: BlockType): Block {
