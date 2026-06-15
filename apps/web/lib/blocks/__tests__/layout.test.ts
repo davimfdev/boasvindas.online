@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { blockFlexStyle, spanFromFraction, MIN_W_PX } from '../layout'
+import { blockFlexStyle, spanFromFraction, MIN_W_PX, FILLABLE_BLOCKS } from '../layout'
 
 describe('blockFlexStyle', () => {
   it('maps a span of 6 to a half-width flex-basis minus the gap', () => {
@@ -40,5 +40,15 @@ describe('spanFromFraction', () => {
   })
   it('returns full span when the container has no width', () => {
     expect(spanFromFraction(100, 0)).toBe(12)
+  })
+})
+
+describe('FILLABLE_BLOCKS', () => {
+  it('includes the media blocks and excludes non-media', () => {
+    expect(FILLABLE_BLOCKS.has('hero')).toBe(true)
+    expect(FILLABLE_BLOCKS.has('image')).toBe(true)
+    expect(FILLABLE_BLOCKS.has('carousel')).toBe(true)
+    expect(FILLABLE_BLOCKS.has('map')).toBe(false)
+    expect(FILLABLE_BLOCKS.has('text')).toBe(false)
   })
 })
