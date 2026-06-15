@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Palette as PaletteIcon } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -17,6 +17,7 @@ import { Palette } from './Palette'
 import { Preview } from './Preview'
 import { Inspector } from './Inspector'
 import { SectionTabs } from './SectionTabs'
+import { ThemePanel } from './ThemePanel'
 
 interface BuilderProps {
   pageId: string
@@ -37,6 +38,7 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
 export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }: BuilderProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- store created once per mount
   const store = useMemo(() => createBuilderStore(initialContent), [])
+  const [showTheme, setShowTheme] = useState(false)
   const content = useBuilder(store, (s) => s.content)
   const dirty = useBuilder(store, (s) => s.dirty)
 
@@ -69,6 +71,14 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
       <header className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
         <h1 className="font-display truncate text-lg font-bold">{title}</h1>
         <div className="flex items-center gap-4 text-sm">
+          <button
+            type="button"
+            onClick={() => setShowTheme((v) => !v)}
+            className="flex items-center gap-1 text-[#0d9488] hover:underline"
+          >
+            <PaletteIcon className="size-4" />
+            Tema
+          </button>
           <span className="text-muted-foreground">{STATUS_LABEL[status]}</span>
           {slug && (
             <Link
@@ -94,6 +104,7 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
           <aside className="overflow-auto border-l border-border">
             <Inspector store={store} />
           </aside>
+          {showTheme && <ThemePanel store={store} />}
         </div>
       </DndContext>
     </div>
