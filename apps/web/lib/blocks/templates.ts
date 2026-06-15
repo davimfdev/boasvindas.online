@@ -21,7 +21,7 @@ const apeCompleto: PageContent = {
     ] },
     { id: 'guide', title: 'Guia Local', icon: 'MapPin', blocks: [
       { id: 'g1', type: 'guide', props: { places: [
-        { name: 'Restaurante exemplo', blurb: 'Comida regional', distance: '300m' },
+        { name: 'Restaurante exemplo', blurb: 'Comida regional', distance: '300m', tags: [] },
       ] } },
     ] },
     { id: 'checkout', title: 'Check-out', icon: 'LogOut', blocks: [

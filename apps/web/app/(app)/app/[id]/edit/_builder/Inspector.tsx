@@ -174,6 +174,25 @@ export function Inspector({ store }: Props) {
                         />
                       )
                     }
+                    if (subField.kind === 'tags') {
+                      const arr = Array.isArray(subVal) ? (subVal as string[]) : []
+                      return (
+                        <div key={subField.key} className="flex flex-col gap-0.5">
+                          <label htmlFor={subId} className="text-xs text-muted-foreground">{subField.label}</label>
+                          <input
+                            id={subId}
+                            className="rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            value={arr.join(', ')}
+                            aria-label={subField.label}
+                            onChange={(e) => {
+                              const next = [...items]
+                              next[i] = { ...(obj as object), [subField.key]: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) }
+                              setItems(next)
+                            }}
+                          />
+                        </div>
+                      )
+                    }
                     return (
                       <div key={subField.key} className="flex flex-col gap-0.5">
                         <label htmlFor={subId} className="text-xs text-muted-foreground">

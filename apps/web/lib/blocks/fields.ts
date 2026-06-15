@@ -1,6 +1,6 @@
 import type { BlockType } from './schema'
 
-export type FieldKind = 'text' | 'textarea' | 'number' | 'select' | 'list' | 'icon'
+export type FieldKind = 'text' | 'textarea' | 'number' | 'select' | 'list' | 'icon' | 'tags'
 
 export interface FieldDef {
   key: string
@@ -84,7 +84,8 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
       { key: 'name', label: 'Nome', kind: 'text' },
       { key: 'blurb', label: 'Descrição', kind: 'text' },
       { key: 'distance', label: 'Distância', kind: 'text' },
-      { key: 'mapUrl', label: 'Link do mapa', kind: 'text' } ] },
+      { key: 'mapUrl', label: 'Link do mapa', kind: 'text' },
+      { key: 'tags', label: 'Tags (vírgula)', kind: 'tags' } ] },
   ],
   emergency: [
     { key: 'contacts', label: 'Contatos', kind: 'list', itemFields: [
