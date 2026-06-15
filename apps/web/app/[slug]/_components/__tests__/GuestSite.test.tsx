@@ -57,4 +57,14 @@ describe('GuestSite', () => {
     expect(wrapper.style.getPropertyValue('--g-accent')).toBe('')
     expect(wrapper.getAttribute('data-theme')).toBe('rustic')
   })
+
+  it('gives height-resized media a full-height parent so it can fill', () => {
+    const content: PageContent = { nav: 'onepage', sections: [
+      { id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'image', layout: { width: 12, height: 320 }, props: { url: 'https://x.com/a.jpg', alt: 'a' } } ] } ] }
+    const { container } = render(<GuestSite title="T" whatsapp={null} theme="modern" content={content} />)
+    const img = container.querySelector('[data-block="b1"] img') as HTMLElement
+    expect(container.querySelector('[data-block="b1"] .h-full')).not.toBeNull()
+    expect(img.className).toContain('h-full')
+  })
 })
