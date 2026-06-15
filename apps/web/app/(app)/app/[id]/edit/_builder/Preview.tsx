@@ -5,7 +5,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { BlockRenderer } from '@/app/[slug]/_components/blocks/BlockRenderer'
-import { blockFlexStyle, spanFromFraction } from '@/lib/blocks/layout'
+import { blockFlexStyle, spanFromFraction, FILLABLE_BLOCKS } from '@/lib/blocks/layout'
 import { resolveTheme } from '@/lib/theme/theme'
 import { FONTS } from '@/lib/theme/fonts'
 import { useBuilder } from './store'
@@ -40,6 +40,8 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, store, onSel
     setNodeRef(el)
     wrapperRef.current = el
   }
+
+  const canFill = FILLABLE_BLOCKS.has(block.type)
 
   const style: React.CSSProperties = {
     ...blockFlexStyle(block.layout, block.type),
@@ -116,17 +118,21 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, store, onSel
             onPointerDown={(e) => startResize(e, { width: true })}
             className="absolute right-0 top-0 z-20 h-full w-2 cursor-ew-resize hover:bg-[#0d9488]/30"
           />
-          <div
-            role="separator"
-            aria-label="Redimensionar altura"
-            onPointerDown={(e) => startResize(e, { height: true })}
-            className="absolute bottom-0 left-0 z-20 h-2 w-full cursor-ns-resize hover:bg-[#0d9488]/30"
-          />
-          <div
-            aria-label="Redimensionar largura e altura"
-            onPointerDown={(e) => startResize(e, { width: true, height: true })}
-            className="absolute bottom-0 right-0 z-20 h-3 w-3 cursor-nwse-resize bg-[#0d9488]"
-          />
+          {canFill && (
+            <>
+              <div
+                role="separator"
+                aria-label="Redimensionar altura"
+                onPointerDown={(e) => startResize(e, { height: true })}
+                className="absolute bottom-0 left-0 z-20 h-2 w-full cursor-ns-resize hover:bg-[#0d9488]/30"
+              />
+              <div
+                aria-label="Redimensionar largura e altura"
+                onPointerDown={(e) => startResize(e, { width: true, height: true })}
+                className="absolute bottom-0 right-0 z-20 h-3 w-3 cursor-nwse-resize bg-[#0d9488]"
+              />
+            </>
+          )}
         </>
       )}
     </div>
