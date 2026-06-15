@@ -4,9 +4,10 @@ import type { RenderCtx } from './BlockRenderer'
 export function HeroBlock({ block }: { block: Block; ctx: RenderCtx }) {
   if (block.type !== 'hero') return null
   const { imageUrl, greeting, propertyName } = block.props
+  const fill = !!block.layout?.height
 
   return (
-    <div className="bg-gaccent text-white px-6 pt-6 pb-12 rounded-b-[50px] shadow-2xl relative overflow-hidden">
+    <div className={`bg-gaccent text-white px-6 pt-6 pb-12 rounded-b-[50px] shadow-2xl relative overflow-hidden ${fill ? 'h-full flex flex-col justify-end' : ''}`}>
       {imageUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-luminosity"
