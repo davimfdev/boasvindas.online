@@ -3,8 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { blockSchema } from '@/lib/blocks/schema'
 import { AccordionBlock } from '../AccordionBlock'
 
-const block = { id: 'a1', type: 'accordion', props: { items: [
-  { icon: 'Info', title: 'Como ligar a TV', summary: 'resumo', body: 'aperte o botão' } ] } } as const
+import type { Block } from '@/lib/blocks/schema'
+const block: Block = { id: 'a1', type: 'accordion', props: { items: [
+  { icon: 'Info', title: 'Como ligar a TV', summary: 'resumo', body: 'aperte o botão' } ] } }
 
 describe('accordion', () => {
   it('parses a valid accordion block', () => {
