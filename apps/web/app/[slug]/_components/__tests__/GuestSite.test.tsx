@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { GuestSite } from '../GuestSite'
 import type { PageContent } from '@/lib/blocks/schema'
 
@@ -66,5 +66,15 @@ describe('GuestSite', () => {
     const img = container.querySelector('[data-block="b1"] img') as HTMLElement
     expect(container.querySelector('[data-block="b1"] .h-full')).not.toBeNull()
     expect(img.className).toContain('h-full')
+  })
+
+  it('opens the search overlay from the header button', () => {
+    const content: PageContent = { nav: 'buttons', sections: [
+      { id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'heading', props: { text: 'Oi', level: 1 } } ] } ] }
+    render(<GuestSite title="T" whatsapp={null} theme="modern" content={content} />)
+    expect(screen.queryByPlaceholderText('O que você procura?')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Buscar na página'))
+    expect(screen.getByPlaceholderText('O que você procura?')).toBeInTheDocument()
   })
 })
