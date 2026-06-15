@@ -60,10 +60,47 @@ export const whatsappBlock = z.object({ ...base, type: z.literal('whatsapp'),
 export const mapBlock = z.object({ ...base, type: z.literal('map'),
   props: z.object({ query: z.string(), label: z.string().optional() }) })
 
+export const calloutBlock = z.object({ ...base, type: z.literal('callout'),
+  props: z.object({
+    variant: z.enum(['tip', 'info', 'warning']).default('tip'),
+    icon: z.string().default('Lightbulb'),
+    text: z.string(),
+  }) })
+
+export const accordionBlock = z.object({ ...base, type: z.literal('accordion'),
+  props: z.object({
+    items: z.array(z.object({
+      icon: z.string().default('Info'),
+      title: z.string(),
+      summary: z.string().default(''),
+      body: z.string().default(''),
+    })).default([]),
+  }) })
+
+export const linkcardBlock = z.object({ ...base, type: z.literal('linkcard'),
+  props: z.object({
+    title: z.string(),
+    text: z.string().default(''),
+    links: z.array(z.object({
+      label: z.string(),
+      href: safeHref.or(z.literal('')),
+    })).default([]),
+  }) })
+
+export const carouselBlock = z.object({ ...base, type: z.literal('carousel'),
+  props: z.object({
+    images: z.array(z.object({
+      url: optionalUrl,
+      alt: z.string().default(''),
+      caption: z.string().optional(),
+    })).default([]),
+  }) })
+
 export const blockSchema = z.discriminatedUnion('type', [
   headingBlock, textBlock, imageBlock, buttonBlock, dividerBlock,
   wifiBlock, checkinBlock, checkoutBlock, rulesBlock, guideBlock,
-  emergencyBlock, heroBlock, whatsappBlock, mapBlock,
+  emergencyBlock, heroBlock, whatsappBlock, mapBlock, calloutBlock,
+  accordionBlock, linkcardBlock, carouselBlock,
 ])
 
 export const sectionSchema = z.object({
