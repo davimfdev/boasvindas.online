@@ -73,12 +73,27 @@ export const sectionSchema = z.object({
   blocks: z.array(blockSchema),
 })
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Cor inválida')
+
+export const pageTheme = z.object({
+  preset: z.string(),
+  colors: z.object({
+    accent: hexColor,
+    secondary: hexColor,
+    background: hexColor,
+  }).partial().optional(),
+  headingFont: z.string().optional(),
+  bodyFont: z.string().optional(),
+}).optional()
+
 export const pageContentSchema = z.object({
   nav: z.enum(['buttons', 'onepage']),
   sections: z.array(sectionSchema).min(1),
+  theme: pageTheme,
 })
 
 export type Block = z.infer<typeof blockSchema>
 export type Section = z.infer<typeof sectionSchema>
+export type PageTheme = z.infer<typeof pageTheme>
 export type PageContent = z.infer<typeof pageContentSchema>
 export type BlockType = Block['type']

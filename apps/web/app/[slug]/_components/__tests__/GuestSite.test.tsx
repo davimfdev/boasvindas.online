@@ -38,4 +38,23 @@ describe('GuestSite', () => {
     const wrapper = container.querySelector('[data-block="b1"]') as HTMLElement
     expect(wrapper.style.flexBasis).toBe('calc(50% - 0.75rem)')
   })
+
+  it('applies themed css vars on the wrapper when content has a theme', () => {
+    const content: PageContent = { nav: 'onepage', theme: { preset: 'rustic' }, sections: [
+      { id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'heading', props: { text: 'Oi', level: 1 } } ] } ] }
+    const { container } = render(<GuestSite title="T" whatsapp={null} theme="modern" content={content} />)
+    const wrapper = container.querySelector('.guest-site') as HTMLElement
+    expect(wrapper.style.getPropertyValue('--g-accent')).toBe('#5d4017')
+  })
+
+  it('leaves the wrapper unstyled (data-theme only) when content has no theme', () => {
+    const content: PageContent = { nav: 'onepage', sections: [
+      { id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'heading', props: { text: 'Oi', level: 1 } } ] } ] }
+    const { container } = render(<GuestSite title="T" whatsapp={null} theme="rustic" content={content} />)
+    const wrapper = container.querySelector('.guest-site') as HTMLElement
+    expect(wrapper.style.getPropertyValue('--g-accent')).toBe('')
+    expect(wrapper.getAttribute('data-theme')).toBe('rustic')
+  })
 })

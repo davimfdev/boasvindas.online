@@ -105,4 +105,29 @@ describe('builder store', () => {
     store.getState().undo()
     expect(store.getState().content.sections[0].blocks[0].layout).toBeUndefined()
   })
+
+  it('setTheme sets a preset and marks dirty', () => {
+    store.getState().setTheme({ preset: 'beach' })
+    expect(store.getState().content.theme?.preset).toBe('beach')
+    expect(store.getState().dirty).toBe(true)
+  })
+
+  it('setTheme deep-merges color overrides', () => {
+    store.getState().setTheme({ colors: { accent: '#111111' } })
+    store.getState().setTheme({ colors: { secondary: '#222222' } })
+    expect(store.getState().content.theme?.colors).toEqual({ accent: '#111111', secondary: '#222222' })
+  })
+
+  it('setTheme with colors:undefined clears overrides (preset reset)', () => {
+    store.getState().setTheme({ colors: { accent: '#111111' } })
+    store.getState().setTheme({ preset: 'rustic', colors: undefined, headingFont: undefined, bodyFont: undefined })
+    expect(store.getState().content.theme?.colors).toBeUndefined()
+    expect(store.getState().content.theme?.preset).toBe('rustic')
+  })
+
+  it('setTheme is undoable', () => {
+    store.getState().setTheme({ preset: 'beach' })
+    store.getState().undo()
+    expect(store.getState().content.theme).toBeUndefined()
+  })
 })
