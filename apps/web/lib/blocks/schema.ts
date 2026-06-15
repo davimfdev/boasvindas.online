@@ -67,10 +67,21 @@ export const calloutBlock = z.object({ ...base, type: z.literal('callout'),
     text: z.string(),
   }) })
 
+export const accordionBlock = z.object({ ...base, type: z.literal('accordion'),
+  props: z.object({
+    items: z.array(z.object({
+      icon: z.string().default('Info'),
+      title: z.string(),
+      summary: z.string().default(''),
+      body: z.string().default(''),
+    })).default([]),
+  }) })
+
 export const blockSchema = z.discriminatedUnion('type', [
   headingBlock, textBlock, imageBlock, buttonBlock, dividerBlock,
   wifiBlock, checkinBlock, checkoutBlock, rulesBlock, guideBlock,
   emergencyBlock, heroBlock, whatsappBlock, mapBlock, calloutBlock,
+  accordionBlock,
 ])
 
 export const sectionSchema = z.object({

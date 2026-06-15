@@ -26,6 +26,7 @@ export const BLOCK_META: Record<BlockType, { label: string; group: 'Básico' | '
   whatsapp:  { label: 'WhatsApp',    group: 'Utilidades', icon: 'MessageCircle',       minW: 'sm' },
   map:       { label: 'Mapa',        group: 'Utilidades', icon: 'Map',                 minW: 'sm' },
   callout:   { label: 'Dica',        group: 'Básico',     icon: 'Lightbulb',           minW: 'sm' },
+  accordion: { label: 'Sanfona',     group: 'Básico',     icon: 'ChevronsUpDown',      minW: 'lg' },
 }
 
 export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
@@ -101,5 +102,12 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
       { value: 'tip', label: 'Dica' }, { value: 'info', label: 'Informação' }, { value: 'warning', label: 'Aviso' } ] },
     { key: 'icon', label: 'Ícone', kind: 'icon' },
     { key: 'text', label: 'Texto', kind: 'textarea' },
+  ],
+  accordion: [
+    { key: 'items', label: 'Itens', kind: 'list', itemFields: [
+      { key: 'icon', label: 'Ícone', kind: 'icon' },
+      { key: 'title', label: 'Título', kind: 'text' },
+      { key: 'summary', label: 'Resumo', kind: 'text' },
+      { key: 'body', label: 'Detalhes', kind: 'textarea' } ] },
   ],
 }
