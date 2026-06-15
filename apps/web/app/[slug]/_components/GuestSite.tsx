@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { X, MessageCircle, QrCode } from 'lucide-react'
+import { X, MessageCircle, QrCode, Search } from 'lucide-react'
 import type { PageContent, Section } from '@/lib/blocks/schema'
 import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
+import { SearchOverlay } from './SearchOverlay'
 import { Icon } from './blocks/Icon'
 import { blockFlexStyle } from '@/lib/blocks/layout'
 import { resolveTheme } from '@/lib/theme/theme'
@@ -45,6 +46,7 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
   // Safe non-null index: pageContentSchema enforces sections.min(1). Do not relax that guarantee.
   const [activeSectionId, setActiveSectionId] = useState<string>(content.sections[0].id)
   const [isQrOpen, setIsQrOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [pageUrl, setPageUrl] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -68,6 +70,13 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
   const resolved = content.theme ? resolveTheme(content.theme, theme) : null
   const activeSection =
     content.sections.find((s) => s.id === activeSectionId) ?? content.sections[0]
+
+  const handleSearchNavigate = (sectionId: string) => {
+    setActiveSectionId(sectionId)
+    if (!isButtonsNav) {
+      requestAnimationFrame(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' }))
+    }
+  }
 
   return (
     <div
@@ -95,13 +104,22 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
           <h1 className="font-serif font-bold text-gaccent text-lg shrink-0">
             {title.toUpperCase()}
           </h1>
-          <button
-            onClick={() => setIsQrOpen(true)}
-            className="p-2 rounded-full transition-colors text-gaccent hover:bg-teal-50 shrink-0"
-            aria-label="QR Code da página"
-          >
-            <QrCode size={24} />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 rounded-full transition-colors text-gaccent hover:bg-teal-50 shrink-0"
+              aria-label="Buscar na página"
+            >
+              <Search size={24} />
+            </button>
+            <button
+              onClick={() => setIsQrOpen(true)}
+              className="p-2 rounded-full transition-colors text-gaccent hover:bg-teal-50 shrink-0"
+              aria-label="QR Code da página"
+            >
+              <QrCode size={24} />
+            </button>
+          </div>
         </div>
 
         <nav aria-label="Seções" className="w-full max-w-5xl mx-auto mt-3 flex items-center gap-2 overflow-x-auto">
@@ -134,6 +152,14 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
           })}
         </nav>
       </header>
+
+      {isSearchOpen && (
+        <SearchOverlay
+          content={content}
+          onNavigate={handleSearchNavigate}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
 
       {isQrOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="qr-dialog-title">
