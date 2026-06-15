@@ -7,6 +7,8 @@ import type { PageContent, Section } from '@/lib/blocks/schema'
 import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
 import { Icon } from './blocks/Icon'
 import { blockFlexStyle } from '@/lib/blocks/layout'
+import { resolveTheme } from '@/lib/theme/theme'
+import { FONTS } from '@/lib/theme/fonts'
 
 interface GuestSiteProps {
   title: string
@@ -57,17 +59,25 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
   }, [])
 
   const isButtonsNav = content.nav === 'buttons'
+  const resolved = content.theme ? resolveTheme(content.theme, theme) : null
   const activeSection =
     content.sections.find((s) => s.id === activeSectionId) ?? content.sections[0]
 
   return (
     <div
       ref={scrollRef}
-      data-theme={theme}
+      data-theme={resolved ? undefined : theme}
+      style={resolved?.vars}
       className={`guest-site h-screen overflow-y-auto flex flex-col bg-gbg text-gaccent-strong relative ${
         isButtonsNav ? '' : 'snap-y snap-mandatory'
       }`}
     >
+      {resolved && (
+        <>
+          <link rel="stylesheet" href={FONTS[resolved.headingFont].cssHref} />
+          <link rel="stylesheet" href={FONTS[resolved.bodyFont].cssHref} />
+        </>
+      )}
       <header
         className={`sticky top-0 z-50 px-5 py-4 transition-all duration-300 border-b ${
           scrolled

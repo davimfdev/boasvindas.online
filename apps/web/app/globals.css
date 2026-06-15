@@ -190,7 +190,7 @@
   --g-surface: #f0fdfa;
   --g-font-heading: 'Cabinet Grotesk';
 
-  font-family: 'General Sans', sans-serif;
+  font-family: var(--g-font-body, 'General Sans'), sans-serif;
 }
 .guest-site[data-theme='rustic'] {
   /* Rustic theme: wood/earth + ochre, Playfair headings */

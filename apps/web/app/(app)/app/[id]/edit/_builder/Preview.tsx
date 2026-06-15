@@ -6,6 +6,8 @@ import { useSortable, SortableContext, rectSortingStrategy } from '@dnd-kit/sort
 import { CSS } from '@dnd-kit/utilities'
 import { BlockRenderer } from '@/app/[slug]/_components/blocks/BlockRenderer'
 import { blockFlexStyle, spanFromFraction } from '@/lib/blocks/layout'
+import { resolveTheme } from '@/lib/theme/theme'
+import { FONTS } from '@/lib/theme/fonts'
 import { useBuilder } from './store'
 import type { BuilderStore } from './store'
 import type { Block } from '@/lib/blocks/schema'
@@ -142,17 +144,25 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
   const blockIds = activeSection.blocks.map((b) => b.id)
   const { setNodeRef, isOver } = useDroppable({ id: 'preview-dropzone' })
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const resolved = content.theme ? resolveTheme(content.theme, theme) : null
 
   return (
     <div className="flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-6">
       <div
         ref={setNodeRef}
-        data-theme={theme}
+        data-theme={resolved ? undefined : theme}
+        style={resolved?.vars}
         className={[
           'guest-site relative w-full max-w-3xl rounded-2xl shadow-2xl bg-background overflow-hidden',
           isOver ? 'ring-2 ring-[#0d9488]' : '',
         ].join(' ')}
       >
+        {resolved && (
+          <>
+            <link rel="stylesheet" href={FONTS[resolved.headingFont].cssHref} />
+            <link rel="stylesheet" href={FONTS[resolved.bodyFont].cssHref} />
+          </>
+        )}
         {activeSection.blocks.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">
             Adicione blocos pelo painel à esquerda
