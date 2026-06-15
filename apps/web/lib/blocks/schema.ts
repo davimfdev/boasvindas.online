@@ -87,11 +87,20 @@ export const linkcardBlock = z.object({ ...base, type: z.literal('linkcard'),
     })).default([]),
   }) })
 
+export const carouselBlock = z.object({ ...base, type: z.literal('carousel'),
+  props: z.object({
+    images: z.array(z.object({
+      url: optionalUrl,
+      alt: z.string().default(''),
+      caption: z.string().optional(),
+    })).default([]),
+  }) })
+
 export const blockSchema = z.discriminatedUnion('type', [
   headingBlock, textBlock, imageBlock, buttonBlock, dividerBlock,
   wifiBlock, checkinBlock, checkoutBlock, rulesBlock, guideBlock,
   emergencyBlock, heroBlock, whatsappBlock, mapBlock, calloutBlock,
-  accordionBlock, linkcardBlock,
+  accordionBlock, linkcardBlock, carouselBlock,
 ])
 
 export const sectionSchema = z.object({
