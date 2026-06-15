@@ -27,6 +27,7 @@ export const BLOCK_META: Record<BlockType, { label: string; group: 'Básico' | '
   map:       { label: 'Mapa',        group: 'Utilidades', icon: 'Map',                 minW: 'sm' },
   callout:   { label: 'Dica',        group: 'Básico',     icon: 'Lightbulb',           minW: 'sm' },
   accordion: { label: 'Sanfona',     group: 'Básico',     icon: 'ChevronsUpDown',      minW: 'lg' },
+  linkcard:  { label: 'Card',        group: 'Básico',     icon: 'SquareStack',         minW: 'lg' },
 }
 
 export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
@@ -109,5 +110,12 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
       { key: 'title', label: 'Título', kind: 'text' },
       { key: 'summary', label: 'Resumo', kind: 'text' },
       { key: 'body', label: 'Detalhes', kind: 'textarea' } ] },
+  ],
+  linkcard: [
+    { key: 'title', label: 'Título', kind: 'text' },
+    { key: 'text', label: 'Texto', kind: 'textarea' },
+    { key: 'links', label: 'Links', kind: 'list', itemFields: [
+      { key: 'label', label: 'Rótulo', kind: 'text' },
+      { key: 'href', label: 'Destino', kind: 'text' } ] },
   ],
 }
