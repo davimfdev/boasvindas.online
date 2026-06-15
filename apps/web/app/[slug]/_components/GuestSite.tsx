@@ -27,7 +27,13 @@ function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
           style={blockFlexStyle(b.layout, b.type)}
           className="overflow-auto max-md:!h-auto max-md:!w-full max-md:!overflow-visible"
         >
-          <BlockRenderer block={b} ctx={ctx} />
+          {b.layout?.height ? (
+            <div className="h-full max-md:!h-auto">
+              <BlockRenderer block={b} ctx={ctx} />
+            </div>
+          ) : (
+            <BlockRenderer block={b} ctx={ctx} />
+          )}
         </div>
       ))}
     </div>
