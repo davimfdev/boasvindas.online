@@ -1,9 +1,22 @@
 'use client'
 
+import { MousePointerClick } from 'lucide-react'
 import { BLOCK_FIELDS, BLOCK_META, type FieldDef } from '@/lib/blocks/fields'
+import { Icon } from '@/app/[slug]/_components/blocks/Icon'
 import type { BuilderStore } from './store'
 import { useBuilder } from './store'
 import { IconPicker } from './IconPicker'
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+      <span className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground">
+        <MousePointerClick className="size-5" />
+      </span>
+      <p className="text-sm text-muted-foreground">Selecione um bloco para editar</p>
+    </div>
+  )
+}
 
 interface Props {
   store: BuilderStore
@@ -14,11 +27,7 @@ export function Inspector({ store }: Props) {
   const content = useBuilder(store, (s) => s.content)
 
   if (!selectedBlockId) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">
-        Selecione um bloco para editar
-      </div>
-    )
+    return <EmptyState />
   }
 
   let block: (typeof content.sections[0]['blocks'][0]) | null = null
@@ -28,11 +37,7 @@ export function Inspector({ store }: Props) {
   }
 
   if (!block) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">
-        Selecione um bloco para editar
-      </div>
-    )
+    return <EmptyState />
   }
 
   const fields = BLOCK_FIELDS[block.type]
@@ -243,7 +248,15 @@ export function Inspector({ store }: Props) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h3 className="text-sm font-semibold">{meta.label}</h3>
+      <div className="flex items-center gap-2.5 border-b border-border/60 pb-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#0d9488]/12 text-[#0d9488]">
+          <Icon name={meta.icon} size={17} />
+        </span>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Bloco</span>
+          <h3 className="text-sm font-bold leading-tight">{meta.label}</h3>
+        </div>
+      </div>
       {fields.map(renderField)}
     </div>
   )

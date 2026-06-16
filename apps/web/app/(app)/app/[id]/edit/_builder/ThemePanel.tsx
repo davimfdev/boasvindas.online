@@ -27,13 +27,13 @@ export function ThemePanel({ store }: ThemePanelProps) {
   const bodyOptions = FONT_KEYS.filter((k) => FONTS[k].kind === 'body')
 
   return (
-    <div className="flex w-72 flex-col gap-5 overflow-auto border-l border-border p-4">
+    <div className="flex w-72 flex-col gap-5 overflow-auto border-l border-border/70 bg-card/40 p-4">
       {/* Load every catalog font so the font dropdowns preview each option in its real typeface */}
       {FONT_KEYS.map((k) => (
         <link key={k} rel="stylesheet" href={FONTS[k].cssHref} />
       ))}
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tema pronto</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Tema pronto</p>
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(PRESETS).map(([key, p]) => (
             <button
@@ -57,7 +57,7 @@ export function ThemePanel({ store }: ThemePanelProps) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cores</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Cores</p>
         {([['accent', 'Destaque'], ['secondary', 'Secundária'], ['background', 'Fundo']] as const).map(([key, label]) => (
           <label key={key} className="flex items-center justify-between gap-2 text-sm">
             {label}
@@ -73,7 +73,7 @@ export function ThemePanel({ store }: ThemePanelProps) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fontes</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Fontes</p>
         <label className="flex flex-col gap-1 text-sm">
           Título
           <select
