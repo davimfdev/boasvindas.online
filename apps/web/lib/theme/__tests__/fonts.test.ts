@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { FONTS, FONT_KEYS } from '../fonts'
 
 describe('FONTS', () => {
-  it('every font has a family, a google stylesheet href and a valid kind', () => {
+  it('every font has a family, a hosted stylesheet href and a valid kind', () => {
     for (const key of FONT_KEYS) {
       const f = FONTS[key]
       expect(f.family.length).toBeGreaterThan(0)
-      expect(f.cssHref.startsWith('https://fonts.googleapis.com/')).toBe(true)
+      expect(f.cssHref).toMatch(/^https:\/\/(fonts\.googleapis\.com|api\.fontshare\.com)\//)
       expect(['heading', 'body']).toContain(f.kind)
     }
   })
