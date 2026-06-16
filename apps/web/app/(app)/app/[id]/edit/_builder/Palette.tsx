@@ -36,10 +36,12 @@ function DraggableItem({ type, store }: DraggableItemProps) {
       {...attributes}
       {...listeners}
       onClick={() => store.getState().addBlock(type)}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+      className="group flex w-full cursor-grab items-center gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm transition-all hover:-translate-y-px hover:border-border/70 hover:bg-card hover:shadow-sm active:cursor-grabbing"
     >
-      <Icon name={meta.icon} size={18} className="shrink-0" />
-      <span>{meta.label}</span>
+      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:bg-[#0d9488]/12 group-hover:text-[#0d9488]">
+        <Icon name={meta.icon} size={16} />
+      </span>
+      <span className="font-medium">{meta.label}</span>
     </button>
   )
 }
@@ -50,17 +52,17 @@ interface PaletteProps {
 
 export function Palette({ store }: PaletteProps) {
   return (
-    <div className="flex flex-col gap-4 p-2">
+    <div className="flex flex-col gap-5 p-3">
       {GROUPS.map((group) => {
         const types = BLOCK_TYPES.filter(
           (type) => BLOCK_META[type].group === (group as Group)
         )
         return (
           <div key={group}>
-            <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
               {group}
             </p>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-0.5">
               {types.map((type) => (
                 <DraggableItem key={type} type={type} store={store} />
               ))}

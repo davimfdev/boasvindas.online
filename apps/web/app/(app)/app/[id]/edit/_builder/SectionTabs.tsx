@@ -17,7 +17,7 @@ export function SectionTabs({ store }: Props) {
   const sections = content.sections
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-card/50 px-5 py-2.5">
       <nav aria-label="Seções" className="flex flex-wrap items-center gap-1">
         {sections.map((section, i) => {
           const isActive = section.id === activeSectionId
@@ -26,8 +26,10 @@ export function SectionTabs({ store }: Props) {
             <div
               key={section.id}
               className={[
-                'flex items-center gap-1 rounded-md border px-1 py-0.5 text-sm',
-                isActive ? 'border-[#0d9488] bg-[#0d9488]/10' : 'border-transparent',
+                'flex items-center gap-1 rounded-full border px-1 py-0.5 text-sm transition-all',
+                isActive
+                  ? 'border-[#0d9488]/40 bg-[#0d9488]/10 shadow-sm'
+                  : 'border-transparent hover:bg-accent/60',
               ].join(' ')}
             >
               {isEditing ? (
@@ -48,7 +50,10 @@ export function SectionTabs({ store }: Props) {
               ) : (
                 <button
                   type="button"
-                  className="px-2 py-0.5 font-medium"
+                  className={[
+                    'rounded-full px-3 py-0.5 font-medium transition-colors',
+                    isActive ? 'text-[#0d9488]' : 'text-muted-foreground hover:text-foreground',
+                  ].join(' ')}
                   onClick={() => {
                     if (isActive) setEditingId(section.id)
                     else store.getState().setActiveSection(section.id)
@@ -94,7 +99,7 @@ export function SectionTabs({ store }: Props) {
         <button
           type="button"
           aria-label="Adicionar seção"
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           onClick={() => store.getState().addSection()}
         >
           <Plus className="size-4" />
@@ -102,12 +107,14 @@ export function SectionTabs({ store }: Props) {
         </button>
       </nav>
 
-      <div className="ml-auto flex items-center gap-1 rounded-md border border-border p-0.5 text-xs">
+      <div className="ml-auto flex items-center gap-0.5 rounded-full border border-border/70 bg-muted/40 p-0.5 text-xs font-semibold">
         <button
           type="button"
           className={[
-            'rounded px-2 py-1',
-            content.nav === 'buttons' ? 'bg-[#0d9488] text-white' : 'text-muted-foreground',
+            'rounded-full px-3 py-1 transition-all',
+            content.nav === 'buttons'
+              ? 'bg-gradient-to-br from-[#0d9488] to-[#0f766e] text-white shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
           ].join(' ')}
           onClick={() => store.getState().setNav('buttons')}
         >
@@ -116,8 +123,10 @@ export function SectionTabs({ store }: Props) {
         <button
           type="button"
           className={[
-            'rounded px-2 py-1',
-            content.nav === 'onepage' ? 'bg-[#0d9488] text-white' : 'text-muted-foreground',
+            'rounded-full px-3 py-1 transition-all',
+            content.nav === 'onepage'
+              ? 'bg-gradient-to-br from-[#0d9488] to-[#0f766e] text-white shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
           ].join(' ')}
           onClick={() => store.getState().setNav('onepage')}
         >

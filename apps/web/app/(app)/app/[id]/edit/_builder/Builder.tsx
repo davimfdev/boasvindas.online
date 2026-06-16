@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Palette as PaletteIcon } from 'lucide-react'
+import { ExternalLink, Palette as PaletteIcon, Sparkles } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -33,6 +33,13 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   saving: 'Salvando…',
   saved: 'Salvo',
   error: 'Erro ao salvar',
+}
+
+const STATUS_DOT: Record<SaveStatus, string> = {
+  idle: 'bg-emerald-500',
+  saving: 'bg-amber-400 animate-pulse',
+  saved: 'bg-emerald-500',
+  error: 'bg-red-500',
 }
 
 export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }: BuilderProps) {
@@ -67,27 +74,40 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <header className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
-        <h1 className="font-display truncate text-lg font-bold">{title}</h1>
-        <div className="flex items-center gap-4 text-sm">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-muted/20">
+      <header className="flex items-center justify-between gap-4 border-b border-border/70 bg-card/70 px-5 py-2.5 backdrop-blur-md">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#0d9488] to-[#0f766e] text-white shadow-sm">
+            <Sparkles className="size-4" />
+          </span>
+          <h1 className="font-display truncate text-base font-bold tracking-tight">{title}</h1>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
           <button
             type="button"
             onClick={() => setShowTheme((v) => !v)}
             aria-pressed={showTheme}
-            className="flex items-center gap-1 text-[#0d9488] hover:underline"
+            className={[
+              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all active:scale-95',
+              showTheme
+                ? 'bg-[#0d9488]/12 text-[#0d9488] ring-1 ring-inset ring-[#0d9488]/30'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+            ].join(' ')}
           >
-            <PaletteIcon className="size-4" />
+            <PaletteIcon className="size-3.5" />
             Tema
           </button>
-          <span className="text-muted-foreground">{STATUS_LABEL[status]}</span>
+          <span className="flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            <span className={`size-1.5 rounded-full ${STATUS_DOT[status]}`} />
+            {STATUS_LABEL[status]}
+          </span>
           {slug && (
             <Link
               href={`/${slug}`}
               target="_blank"
-              className="flex items-center gap-1 text-[#0d9488] hover:underline"
+              className="flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#0d9488] to-[#0f766e] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-105 active:scale-95"
             >
-              <ExternalLink className="size-4" />
+              <ExternalLink className="size-3.5" />
               Ver página
             </Link>
           )}
@@ -98,11 +118,11 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className={`grid flex-1 grid-cols-1 overflow-hidden ${showTheme ? 'md:grid-cols-[200px_1fr_280px_18rem]' : 'md:grid-cols-[200px_1fr_280px]'}`}>
-          <aside className="overflow-auto border-r border-border">
+          <aside className="overflow-auto border-r border-border/70 bg-card/40">
             <Palette store={store} />
           </aside>
           <Preview store={store} theme={theme} whatsapp={whatsapp} />
-          <aside className="overflow-auto border-l border-border">
+          <aside className="overflow-auto border-l border-border/70 bg-card/40">
             <Inspector store={store} />
           </aside>
           {showTheme && <ThemePanel store={store} />}

@@ -160,13 +160,19 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
   const resolved = content.theme ? resolveTheme(content.theme, theme) : null
 
   return (
-    <div className="flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-6">
+    <div
+      className="flex flex-1 items-start justify-center overflow-auto bg-muted/30 p-6"
+      style={{
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(120,120,135,0.10) 1px, transparent 0)',
+        backgroundSize: '22px 22px',
+      }}
+    >
       <div
         ref={setNodeRef}
         data-theme={resolved ? undefined : theme}
         style={resolved?.vars}
         className={[
-          'guest-site relative w-full max-w-3xl rounded-2xl shadow-2xl bg-background overflow-hidden',
+          'guest-site relative w-full max-w-3xl rounded-2xl shadow-2xl ring-1 ring-border/50 bg-background overflow-hidden',
           isOver ? 'ring-2 ring-[#0d9488]' : '',
         ].join(' ')}
       >
