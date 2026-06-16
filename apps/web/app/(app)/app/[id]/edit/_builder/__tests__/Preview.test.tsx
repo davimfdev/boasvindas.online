@@ -20,13 +20,18 @@ it('clicking a block selects it in the store', () => {
   expect(store.getState().selectedBlockId).toBe('b1')
 })
 
-it('applies the span width as a flex-basis on the block wrapper', () => {
+it('applies the span width as a grid-column span on the block wrapper', () => {
   const widthContent: PageContent = { nav: 'buttons', sections: [
     { id: 's1', title: 'Início', icon: 'Home', blocks: [
       { id: 'b1', type: 'heading', props: { text: 'Bem-vindo', level: 1 }, layout: { width: 6 } } ] } ] }
   const { container } = render(<Preview store={createBuilderStore(widthContent)} theme="modern" whatsapp={null} />)
   const wrapper = container.querySelector('[role="group"]') as HTMLElement
-  expect(wrapper.style.flexBasis).toBe('calc(50% - 0.75rem)')
+  expect(wrapper.style.gridColumn).toBe('span 6')
+})
+
+it('lays the canvas out in a 12-column grid container', () => {
+  const { container } = render(<Preview store={createBuilderStore(initial)} theme="modern" whatsapp={null} />)
+  expect(container.querySelector('.md\\:grid-cols-12')).not.toBeNull()
 })
 
 it('applies themed css vars on the preview frame', () => {

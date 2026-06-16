@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { X, MessageCircle, QrCode, Search } from 'lucide-react'
-import type { PageContent, Section } from '@/lib/blocks/schema'
+import type { Block, PageContent, Section } from '@/lib/blocks/schema'
 import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
 import { SearchOverlay } from './SearchOverlay'
 import { Icon } from './blocks/Icon'
-import { blockFlexStyle } from '@/lib/blocks/layout'
+import { blockGridStyle } from '@/lib/blocks/layout'
+import { useGridRowSpan } from '@/lib/blocks/useGridRowSpan'
 import { resolveTheme } from '@/lib/theme/theme'
 import { FONTS } from '@/lib/theme/fonts'
 
@@ -18,24 +19,29 @@ interface GuestSiteProps {
   content: PageContent
 }
 
+function GridBlock({ block, ctx }: { block: Block; ctx: RenderCtx }) {
+  const { ref, span } = useGridRowSpan<HTMLDivElement>()
+  return (
+    <div data-block={block.id} style={{ ...blockGridStyle(block.layout), gridRowEnd: `span ${span}` }}>
+      <div
+        ref={ref}
+        className={block.layout?.height ? 'h-full max-md:!h-auto' : ''}
+        style={block.layout?.height ? { height: block.layout.height } : undefined}
+      >
+        <BlockRenderer block={block} ctx={ctx} />
+      </div>
+    </div>
+  )
+}
+
 function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-wrap items-start gap-x-3 gap-y-8">
+    <div
+      className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-x-3"
+      style={{ gridAutoRows: '8px', gridAutoFlow: 'dense' }}
+    >
       {section.blocks.map((b) => (
-        <div
-          key={b.id}
-          data-block={b.id}
-          style={blockFlexStyle(b.layout, b.type)}
-          className="overflow-auto max-md:!h-auto max-md:!w-full max-md:!overflow-visible"
-        >
-          {b.layout?.height ? (
-            <div className="h-full max-md:!h-auto">
-              <BlockRenderer block={b} ctx={ctx} />
-            </div>
-          ) : (
-            <BlockRenderer block={b} ctx={ctx} />
-          )}
-        </div>
+        <GridBlock key={b.id} block={b} ctx={ctx} />
       ))}
     </div>
   )
@@ -197,18 +203,6 @@ export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
             <p className="text-gaccent font-serif font-bold text-lg uppercase tracking-tight">{title}</p>
             <p className="text-gray-400 text-[10px] uppercase tracking-[0.2em] font-black">Anfitrião Profissional</p>
           </div>
-
-          {whatsappUrl && (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-[#25D366]/10 text-gaccent py-2 px-4 rounded-xl hover:bg-[#25D366]/20 transition-all font-bold inline-flex items-center justify-center gap-2"
-            >
-              <MessageCircle size={16} className="text-[#25D366]" />
-              {whatsapp}
-            </a>
-          )}
 
           <div className="pt-4 border-t border-gray-50 w-full text-[9px] text-gray-300 uppercase tracking-[0.4em] font-black">
             {title} • Feito com boasvindas.online

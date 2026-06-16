@@ -30,13 +30,21 @@ describe('GuestSite', () => {
     expect(screen.queryByText('NetX')).not.toBeInTheDocument()
   })
 
-  it('applies the block span as a flex-basis on the guest page', () => {
+  it('applies the block span as a grid-column span on the guest page', () => {
     const content: PageContent = { nav: 'onepage', sections: [
       { id: 's1', title: 'Início', icon: 'Home', blocks: [
         { id: 'b1', type: 'heading', props: { text: 'Olá', level: 1 }, layout: { width: 6 } } ] } ] }
     const { container } = render(<GuestSite title="T" whatsapp={null} theme="modern" content={content} />)
     const wrapper = container.querySelector('[data-block="b1"]') as HTMLElement
-    expect(wrapper.style.flexBasis).toBe('calc(50% - 0.75rem)')
+    expect(wrapper.style.gridColumn).toBe('span 6')
+  })
+
+  it('lays the section out in a 12-column grid container', () => {
+    const content: PageContent = { nav: 'onepage', sections: [
+      { id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'heading', props: { text: 'Oi', level: 1 } } ] } ] }
+    const { container } = render(<GuestSite title="T" whatsapp={null} theme="modern" content={content} />)
+    expect(container.querySelector('.md\\:grid-cols-12')).not.toBeNull()
   })
 
   it('applies themed css vars on the wrapper when content has a theme', () => {
