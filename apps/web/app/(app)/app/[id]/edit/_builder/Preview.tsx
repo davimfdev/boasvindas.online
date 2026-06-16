@@ -5,7 +5,8 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { BlockRenderer } from '@/app/[slug]/_components/blocks/BlockRenderer'
-import { blockFlexStyle, spanFromFraction, FILLABLE_BLOCKS } from '@/lib/blocks/layout'
+import { blockGridStyle, spanFromFraction, FILLABLE_BLOCKS } from '@/lib/blocks/layout'
+import { useGridRowSpan } from '@/lib/blocks/useGridRowSpan'
 import { resolveTheme } from '@/lib/theme/theme'
 import { FONTS } from '@/lib/theme/fonts'
 import { useBuilder } from './store'
@@ -42,9 +43,11 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, store, onSel
   }
 
   const canFill = FILLABLE_BLOCKS.has(block.type)
+  const { ref: contentRef, span } = useGridRowSpan<HTMLDivElement>()
 
   const style: React.CSSProperties = {
-    ...blockFlexStyle(block.layout, block.type),
+    ...blockGridStyle(block.layout),
+    gridRowEnd: `span ${span}`,
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
@@ -95,7 +98,11 @@ function SortableBlock({ block, isSelected, whatsapp, containerRef, store, onSel
       role="group"
     >
       {/* Disable inner links/buttons during edit: clicks select the block, never navigate */}
-      <div className={['pointer-events-none select-none', block.layout?.height ? 'h-full overflow-hidden' : ''].join(' ')}>
+      <div
+        ref={contentRef}
+        className={['pointer-events-none select-none', block.layout?.height ? 'h-full overflow-hidden max-md:!h-auto' : ''].join(' ')}
+        style={block.layout?.height ? { height: block.layout.height } : undefined}
+      >
         <BlockRenderer block={block} ctx={{ whatsapp }} />
       </div>
 
@@ -175,7 +182,11 @@ export function Preview({ store, theme, whatsapp }: PreviewProps) {
           </p>
         ) : (
           <SortableContext items={blockIds} strategy={rectSortingStrategy}>
-            <div ref={containerRef} className="flex flex-wrap items-start gap-x-3 gap-y-8 pb-8">
+            <div
+              ref={containerRef}
+              className="grid grid-cols-1 md:grid-cols-12 gap-x-3 pb-8"
+              style={{ gridAutoRows: '8px', gridAutoFlow: 'dense' }}
+            >
               {activeSection.blocks.map((block) => (
                 <SortableBlock
                   key={block.id}
