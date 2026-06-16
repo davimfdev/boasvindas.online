@@ -56,19 +56,6 @@ pnpm install
 pnpm dev          # sobe o app em http://localhost:3000
 ```
 
-### Variáveis de ambiente
-
-Defina em `apps/web/.env.local` (local) e no painel do Netlify (produção, escopo **Builds** marcado):
-
-| Variável | Descrição |
-|----------|-----------|
-| `DATABASE_URL` | String de conexão do Neon (PostgreSQL) |
-| `AUTH_SECRET` | Segredo do Auth.js (`openssl rand -base64 32`) |
-| `AUTH_URL` | URL canônica da app (`http://localhost:3000` em dev, `https://boasvindas.online` em produção) |
-| `NEXT_PUBLIC_SITE_URL` | URL pública base, usada no QR Code do hóspede |
-
-> Variáveis de build precisam estar declaradas em `turbo.json` (`tasks.build.env`) — o Turbo roda em strict env mode e remove as não declaradas antes do `next build`.
-
 ## Scripts
 
 ```bash
