@@ -28,6 +28,10 @@ export function ThemePanel({ store }: ThemePanelProps) {
 
   return (
     <div className="flex w-72 flex-col gap-5 overflow-auto border-l border-border p-4">
+      {/* Load every catalog font so the font dropdowns preview each option in its real typeface */}
+      {FONT_KEYS.map((k) => (
+        <link key={k} rel="stylesheet" href={FONTS[k].cssHref} />
+      ))}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tema pronto</p>
         <div className="grid grid-cols-2 gap-2">
