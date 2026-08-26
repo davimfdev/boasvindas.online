@@ -1,0 +1,224 @@
+import { useState, useEffect, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
+import { X, MessageCircle, QrCode, Search } from 'lucide-react'
+import type { Block, PageContent, Section } from '@/lib/blocks/schema'
+import { BlockRenderer, type RenderCtx } from './blocks/BlockRenderer'
+import { SearchOverlay } from './SearchOverlay'
+import { Icon } from './blocks/Icon'
+import { blockGridStyle } from '@/lib/blocks/layout'
+import { useGridRowSpan } from '@/lib/blocks/useGridRowSpan'
+import { resolveTheme } from '@/lib/theme/theme'
+import { FONTS } from '@/lib/theme/fonts'
+
+interface GuestSiteProps {
+  title: string
+  whatsapp: string | null
+  theme: string
+  content: PageContent
+}
+
+function GridBlock({ block, ctx }: { block: Block; ctx: RenderCtx }) {
+  const { ref, span } = useGridRowSpan<HTMLDivElement>()
+  return (
+    <div data-block={block.id} style={{ ...blockGridStyle(block.layout), gridRowEnd: `span ${span}` }}>
+      <div
+        ref={ref}
+        className={block.layout?.height ? 'h-full max-md:!h-auto' : ''}
+        style={block.layout?.height ? { height: block.layout.height } : undefined}
+      >
+        <BlockRenderer block={block} ctx={ctx} />
+      </div>
+    </div>
+  )
+}
+
+function SectionView({ section, ctx }: { section: Section; ctx: RenderCtx }) {
+  return (
+    <div
+      className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-x-3"
+      style={{ gridAutoRows: '8px', gridAutoFlow: 'dense' }}
+    >
+      {section.blocks.map((b) => (
+        <GridBlock key={b.id} block={b} ctx={ctx} />
+      ))}
+    </div>
+  )
+}
+
+export function GuestSite({ title, whatsapp, theme, content }: GuestSiteProps) {
+  const ctx: RenderCtx = { whatsapp }
+  // Safe non-null index: pageContentSchema enforces sections.min(1). Do not relax that guarantee.
+  const [activeSectionId, setActiveSectionId] = useState<string>(content.sections[0].id)
+  const [isQrOpen, setIsQrOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [pageUrl, setPageUrl] = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const whatsappDigits = whatsapp?.replace(/\D/g, '') || ''
+  const whatsappUrl = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const handleScroll = () => setScrolled(el.scrollTop > 20)
+    el.addEventListener('scroll', handleScroll)
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    setPageUrl(window.location.href)
+  }, [])
+
+  const isButtonsNav = content.nav === 'buttons'
+  const resolved = content.theme ? resolveTheme(content.theme, theme) : null
+  const activeSection =
+    content.sections.find((s) => s.id === activeSectionId) ?? content.sections[0]
+
+  const handleSearchNavigate = (sectionId: string) => {
+    setActiveSectionId(sectionId)
+    if (!isButtonsNav) {
+      requestAnimationFrame(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' }))
+    }
+  }
+
+  return (
+    <div
+      ref={scrollRef}
+      data-theme={resolved ? undefined : theme}
+      style={resolved?.vars}
+      className={`guest-site h-screen overflow-y-auto flex flex-col bg-gbg text-gaccent-strong relative ${
+        isButtonsNav ? '' : 'snap-y snap-mandatory'
+      }`}
+    >
+      {resolved && (
+        <>
+          <link rel="stylesheet" href={FONTS[resolved.headingFont].cssHref} />
+          <link rel="stylesheet" href={FONTS[resolved.bodyFont].cssHref} />
+        </>
+      )}
+      <header
+        className={`sticky top-0 z-50 px-5 py-4 transition-all duration-300 border-b ${
+          scrolled
+            ? 'bg-white/90 backdrop-blur-md shadow-md border-gray-100'
+            : 'bg-white border-transparent'
+        }`}
+      >
+        <div className="w-full max-w-5xl mx-auto flex items-center justify-between gap-3">
+          <h1 className="font-serif font-bold text-gaccent text-lg shrink-0">
+            {title.toUpperCase()}
+          </h1>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 rounded-full transition-colors text-gaccent hover:bg-teal-50 shrink-0"
+              aria-label="Buscar na página"
+            >
+              <Search size={24} />
+            </button>
+            <button
+              onClick={() => setIsQrOpen(true)}
+              className="p-2 rounded-full transition-colors text-gaccent hover:bg-teal-50 shrink-0"
+              aria-label="QR Code da página"
+            >
+              <QrCode size={24} />
+            </button>
+          </div>
+        </div>
+
+        <nav aria-label="Seções" className="w-full max-w-5xl mx-auto mt-3 flex items-center gap-2 overflow-x-auto">
+          {content.sections.map((section) => {
+            const isActive = section.id === activeSectionId
+            const className = `whitespace-nowrap px-4 py-2 rounded-full transition-all flex items-center gap-2 text-sm font-bold ${
+              isActive
+                ? 'bg-gaccent text-gsecondary shadow-lg'
+                : 'text-gaccent-strong hover:bg-gbg'
+            }`
+            const inner = (
+              <>
+                <Icon name={section.icon} size={16} />
+                {section.title}
+              </>
+            )
+            return isButtonsNav ? (
+              <button
+                key={section.id}
+                onClick={() => setActiveSectionId(section.id)}
+                className={className}
+              >
+                {inner}
+              </button>
+            ) : (
+              <a key={section.id} href={`#${section.id}`} className={className}>
+                {inner}
+              </a>
+            )
+          })}
+        </nav>
+      </header>
+
+      {isSearchOpen && (
+        <SearchOverlay
+          content={content}
+          onNavigate={handleSearchNavigate}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
+
+      {isQrOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="qr-dialog-title">
+          <div className="absolute inset-0 bg-gaccent-strong/60 backdrop-blur-sm" onClick={() => setIsQrOpen(false)} />
+          <div className="relative bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-xs w-full animate-slideUp">
+            <button autoFocus onClick={() => setIsQrOpen(false)} className="absolute top-4 right-4 text-gray-300 hover:text-gaccent" aria-label="Fechar">
+              <X size={24} />
+            </button>
+            <h2 id="qr-dialog-title" className="font-serif font-bold text-lg text-gaccent">Acesse no celular</h2>
+            <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-100">
+              {pageUrl && <QRCodeSVG value={pageUrl} size={180} level="H" />}
+            </div>
+            <p className="text-[11px] text-gray-500 text-center leading-relaxed">Aponte a câmera para abrir esta página de boas-vindas.</p>
+          </div>
+        </div>
+      )}
+
+      <main className="flex-1 overflow-x-hidden flex flex-col items-center w-full">
+        {isButtonsNav
+          ? activeSection && <SectionView section={activeSection} ctx={ctx} />
+          : content.sections.map((section) => (
+              <section
+                key={section.id}
+                id={section.id}
+                className="w-full flex flex-col items-center justify-start scroll-mt-24 snap-start py-10"
+              >
+                <SectionView section={section} ctx={ctx} />
+              </section>
+            ))}
+      </main>
+
+      <footer className="w-full bg-white border-t border-gray-100 py-6 px-6 mt-auto flex flex-col items-center snap-start">
+        <div className="w-full max-w-5xl flex flex-col items-center text-center gap-4">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-gaccent font-serif font-bold text-lg uppercase tracking-tight">{title}</p>
+            <p className="text-gray-400 text-[10px] uppercase tracking-[0.2em] font-black">Anfitrião Profissional</p>
+          </div>
+
+          <div className="pt-4 border-t border-gray-50 w-full text-[9px] text-gray-300 uppercase tracking-[0.4em] font-black">
+            {title} • Feito com boasvindas.online
+          </div>
+        </div>
+      </footer>
+
+      {whatsappUrl && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-8 right-8 bg-[#25D366] text-white p-5 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-40 border-4 border-white flex items-center justify-center"
+          aria-label="Falar no WhatsApp"
+        >
+          <MessageCircle size={28} />
+        </a>
+      )}
+    </div>
+  )
+}

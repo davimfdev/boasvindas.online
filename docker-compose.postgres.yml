@@ -1,0 +1,37 @@
+# Postgres for the VPS, to be added in Coolify as a Docker Compose resource.
+#
+# The API reaches it by service name on the shared Docker network, so no
+# container IP is ever hardcoded:
+#   DATABASE_URL=postgres://boasvindas:SENHA@boasvindas-db:5432/boasvindas
+#
+# This file does NOT migrate any data. See docs/VPS_MIGRATION.md for the
+# Neon -> VPS dump/restore steps.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: boasvindas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-boasvindas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-boasvindas}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # No ports mapping: the database stays reachable only inside the Docker
+    # network, never exposed to the internet.
+    networks:
+      - boasvindas
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-boasvindas} -d ${POSTGRES_DB:-boasvindas}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+
+networks:
+  boasvindas:
+    name: boasvindas
+    external: true
