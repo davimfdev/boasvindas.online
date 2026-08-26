@@ -1,24 +1,18 @@
 # Dependencies
 node_modules
-.pnpm-store
 
 # Build output
-.next
 dist
-.turbo
+server/dist
 *.tsbuildinfo
-next-env.d.ts
 
-# Env
+# Env — never commit real values; .env.example is the tracked template
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Logs
 *.log
-
-# Netlify
-.netlify
 
 # Editors
 .idea
@@ -31,6 +25,9 @@ CLAUDE.local.md
 # Generated tooling output (graphify knowledge graph)
 graphify-out/
 .claude/graphify-out/
+
+# Legacy Netlify local state (Next.js era)
+.netlify
 
 # OS / junk
 .DS_Store

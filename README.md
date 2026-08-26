@@ -6,9 +6,9 @@ Produção: **https://boasvindas.online**
 
 ## Funcionalidades
 
-- Cadastro e login de anfitriões (Auth.js v5)
+- Cadastro e login de anfitriões (sessão JWT em cookie httpOnly)
 - Dashboard para criar, publicar e gerenciar páginas
-- Página pública do hóspede em `/[slug]` (SSR + ISR)
+- Página pública do hóspede em `/:slug`
 - 7 seções fixas: boas-vindas, apartamento, check-in, regras, guia local, check-out, emergência
 - 2 temas via CSS variables: **Modern** (teal/amber) e **Rustic** (terra/madeira)
 - QR Code e botão de WhatsApp flutuante
@@ -18,61 +18,90 @@ Produção: **https://boasvindas.online**
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Framework | Next.js 16 (App Router + Route Handlers) |
+| Frontend | React 19 + Vite 8 (SPA, React Router) |
+| Backend | Express 5 + TypeScript (ESM, Node 22) |
 | Linguagem | TypeScript |
 | Estilo | Tailwind CSS v4 + shadcn/ui |
 | Animação | GSAP (ScrollTrigger) |
-| Auth | Auth.js v5 (Credentials, sessão por cookie) |
-| Banco | Drizzle ORM + Neon (PostgreSQL serverless) |
-| Build | Turborepo + pnpm |
-| Deploy | Netlify (`@netlify/plugin-nextjs`) |
+| Auth | JWT HS256 (`jose`) em cookie httpOnly + bcrypt |
+| Banco | Drizzle ORM + PostgreSQL (driver `postgres`) |
+| Deploy | Coolify + Nginx Proxy Manager (VPS própria) |
 
 ## Estrutura
 
-Monorepo Turborepo. Hoje há um único app:
-
 ```
-apps/web/
-  app/
-    (marketing)        homepage e landing pública
-    (auth)             login e cadastro
-    (app)              dashboard autenticado
-    [slug]/            página pública do hóspede (SSR/ISR)
-    api/               Route Handlers (REST)
-  lib/
-    db/                schema e queries Drizzle (Neon)
-    auth.ts             configuração Auth.js
+index.html             shell da SPA
+vite.config.ts         alias @ -> ./src, proxy /api -> :3000 em dev
+src/
+  main.tsx             BrowserRouter + AuthProvider
+  App.tsx              rotas e guarda de autenticação
+  pages/               Home, Login, Cadastro, Dashboard, Edit, Guest, NotFound
+  layouts/             AppLayout, AuthLayout
+  features/
+    builder/           construtor drag-and-drop
+    dashboard/         diálogos e ações da lista de páginas
+    guest/             blocos da página do hóspede
+  lib/                 api.ts, auth.tsx, blocks/, theme/, utils.ts
+server/
+  Dockerfile           multi-stage; contexto de build = raiz do repositório
+  migrations/          migrations do Drizzle
+  src/
+    app.ts             middlewares e montagem das rotas
+    routes/            health, auth, pages, public
+    middleware/        require-auth, error
+    services/          session (JWT), password (bcrypt), page-content
+    db/                client postgres-js + schema Drizzle
 ```
 
 ## Desenvolvimento
 
-Pré-requisitos: Node 20, pnpm 9.
+Pré-requisitos: Node 22, npm.
+
+Dois terminais.
 
 ```bash
-pnpm install
+# Terminal 1 — API
+cd server
+npm ci
+cp ../.env.example .env       # preencha DATABASE_URL e AUTH_SECRET
+npm run dev                   # http://localhost:3000
 
-# crie apps/web/.env.local com as variáveis listadas abaixo
-
-pnpm dev          # sobe o app em http://localhost:3000
+# Terminal 2 — frontend
+npm ci
+npm run dev                   # http://localhost:5173
 ```
+
+O Vite faz proxy de `/api` para a API, então o cookie de sessão é first-party em
+dev, igual à produção.
 
 ## Scripts
 
 ```bash
-pnpm dev          # turbo dev (todos os apps)
-pnpm build        # turbo build
-pnpm typecheck    # tsc --noEmit
-pnpm test         # vitest
+# frontend (raiz)
+npm run dev
+npm run build      # tsc --noEmit && vite build -> /dist
+npm run typecheck
+npm test
 
-# banco
-pnpm drizzle-kit generate   # gerar migration a partir do schema
-pnpm drizzle-kit migrate    # rodar migrations
-pnpm drizzle-kit studio     # abrir Drizzle Studio
+# backend (server/)
+npm run dev
+npm run build      # tsc -> server/dist
+npm run typecheck
+npm test
+npm run db:generate   # gerar migration a partir do schema
+npm run db:migrate    # rodar migrations
 ```
 
 ## Deploy
 
-Push no branch de produção dispara build e deploy automáticos no Netlify. A configuração está em `netlify.toml` (build command, publish dir e plugin Next.js). O domínio `boasvindas.online` usa Netlify DNS.
+Dois recursos no Coolify, atrás do Nginx Proxy Manager:
+
+- `boasvindas-site` — Nixpacks, Static Site, publish `/dist`, porta 80
+- `boasvindas-api` — Dockerfile `/server/Dockerfile`, porta 3000, health `/health`
+
+O NPM roteia `/` para o site e `/api/` para a API, no mesmo domínio. Passo a
+passo completo, variáveis de ambiente, migração do banco e troubleshooting em
+[docs/VPS_MIGRATION.md](./docs/VPS_MIGRATION.md).
 
 ## Roadmap
 

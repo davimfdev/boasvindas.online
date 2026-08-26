@@ -1,0 +1,26 @@
+# Shared by every build context in this repo (frontend Nixpacks + server Dockerfile).
+# Only exclude what NO build needs — never frontend sources, package manifests,
+# index.html or vite config, or the Nixpacks static build breaks.
+
+.git
+.github
+.idea
+.vscode
+.claude
+.codex
+.agents
+
+**/node_modules
+**/dist
+**/.turbo
+**/.netlify
+
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
