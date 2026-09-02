@@ -8,8 +8,9 @@ RUN npm ci
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY server/package.json server/package-lock.json server/tsconfig.json ./
+COPY server/package.json server/package-lock.json server/tsconfig.json server/tsconfig.build.json ./
 COPY server/src ./src
+# tsconfig.build.json drops src/**/__tests__, so no test code reaches the image.
 RUN npm run build
 
 FROM node:22-alpine AS prod-deps

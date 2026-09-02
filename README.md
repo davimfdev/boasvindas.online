@@ -31,6 +31,8 @@ Produção: **https://boasvindas.online**
 
 ```
 index.html             shell da SPA
+Dockerfile             build da SPA + imagem nginx (frontend)
+nginx.conf             SPA fallback, cache de assets, gzip
 vite.config.ts         alias @ -> ./src, proxy /api -> :3000 em dev
 src/
   main.tsx             BrowserRouter + AuthProvider
@@ -96,8 +98,12 @@ npm run db:migrate    # rodar migrations
 
 Dois recursos no Coolify, atrás do Nginx Proxy Manager:
 
-- `boasvindas-site` — Nixpacks, Static Site, publish `/dist`, porta 80
+- `boasvindas-site` — Dockerfile `/Dockerfile` (nginx + `/dist`), porta 80
 - `boasvindas-api` — Dockerfile `/server/Dockerfile`, porta 3000, health `/health`
+
+O banco é o Postgres que já roda na VPS, alcançado por `app-postgres:5432` na
+rede Docker do Coolify — nunca pelo hostname `postgres`, que é o banco interno
+do próprio Coolify.
 
 O NPM roteia `/` para o site e `/api/` para a API, no mesmo domínio. Passo a
 passo completo, variáveis de ambiente, migração do banco e troubleshooting em
