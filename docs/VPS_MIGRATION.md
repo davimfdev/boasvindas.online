@@ -55,21 +55,21 @@ build, SSR no próprio Express, ou voltar ao Next.js em container.
           v                                   v
  +------------------+             +---------------------+
  | boasvindas-site  |             |  boasvindas-api     |
- | Nixpacks estatico|             |  Dockerfile  :3000  |
+ | Dockerfile nginx |             |  Dockerfile  :3000  |
  | /dist  :80       |             |  Express 5 + TS     |
  | SPA fallback     |             |  /health            |
  +------------------+             +----------+----------+
                                              | rede Docker
                                              v
                                   +---------------------+
-                                  |  boasvindas-db      |
-                                  |  postgres:17-alpine |
+                                  |  app-postgres       |
+                                  |  postgres  :5432    |
                                   |  sem porta publica  |
                                   +---------------------+
 ```
 
 Os containers se encontram por **network alias** (`boasvindas-site`,
-`boasvindas-api`, `boasvindas-db`). Nenhum IP `10.x.x.x` é usado — o Coolify
+`boasvindas-api`, `app-postgres`). Nenhum IP `10.x.x.x` é usado — o Coolify
 recria containers a cada deploy e os IPs mudam.
 
 ---
@@ -140,6 +140,7 @@ server/
 | Método | Rota | Auth | Body | Respostas |
 |---|---|---|---|---|
 | GET | `/health` | — | — | `200 {"status":"ok"}` |
+| GET | `/api/health` | — | — | `200 {"status":"ok"}` (mesma sonda, alcançável pelo proxy) |
 | POST | `/api/auth/register` | — | `{name,email,password}` | `201 {user}` · `400 VALIDATION` · `409 EMAIL_EXISTS` |
 | POST | `/api/auth/login` | — | `{email,password}` | `200 {user}` + cookie · `401 CREDENTIALS` |
 | POST | `/api/auth/logout` | — | — | `204` + cookie limpo |
@@ -204,7 +205,7 @@ Template completo em [`.env.example`](../.env.example). Resumo:
 
 | Variável | Obrigatória | Descrição |
 |---|---|---|
-| `DATABASE_URL` | sim | string de conexão Postgres (formato em `.env.example`) |
+| `DATABASE_URL` | sim | `postgresql://<usuario>:<senha>@app-postgres:5432/boasvindas` |
 | `AUTH_SECRET` | sim | segredo do JWT (`openssl rand -base64 32`) |
 | `DATABASE_SSL` | não | `require` quando o Postgres exigir TLS (Neon) |
 | `DATABASE_POOL_MAX` | não | padrão `10` |
@@ -218,50 +219,84 @@ Template completo em [`.env.example`](../.env.example). Resumo:
 `DATABASE_URL` e `AUTH_SECRET` são validadas no boot: sem elas o container sai
 imediatamente, em vez de falhar na primeira requisição.
 
+> **`.env.example` ainda cita o host antigo `boasvindas-db`.** O arquivo está
+> protegido por uma regra de permissão local (`deny: Write(**/.env.*)`), então a
+> troca é manual: na linha `DATABASE_URL`, substitua o trecho
+> `@boasvindas-db:5432` por `@app-postgres:5432`. Nenhuma outra linha muda.
+
+No boot a API imprime um diagnóstico **sanitizado** do destino do banco — host,
+porta e database, nunca usuário nem senha:
+
+```
+[api] listening on http://0.0.0.0:3000
+[api] env=production
+[api] database -> app-postgres:5432/boasvindas
+```
+
 ---
 
 ## 6. Deploy no Coolify
 
 ### 6.1 Rede Docker
 
-Crie uma vez, antes dos recursos, a rede compartilhada:
+Os três recursos e o Nginx Proxy Manager precisam enxergar uns aos outros por
+nome. Anexe `boasvindas-site` e `boasvindas-api` à **mesma rede Docker onde o
+`app-postgres` já roda** (a rede que o NPM usa). Se preferir uma rede dedicada,
+crie-a uma vez e anexe também o Postgres existente:
 
 ```bash
 docker network create boasvindas
+docker network connect boasvindas app-postgres
 ```
 
-Anexe os três recursos a ela. É o que garante que `boasvindas-api` alcance
-`boasvindas-db` pelo nome, sem IP fixo.
+É o que garante que `boasvindas-api` alcance `app-postgres` pelo nome, sem IP
+fixo — o Coolify recria containers a cada deploy e os IPs mudam.
 
-### 6.2 Postgres (`boasvindas-db`)
+### 6.2 Postgres (`app-postgres`)
 
-Suba pelo `docker-compose.postgres.yml` na raiz (recurso do tipo Docker Compose)
-ou use o recurso PostgreSQL nativo do Coolify.
+**O Postgres já existe na VPS.** Esta migração não cria, altera nem toca nesse
+banco: a API apenas recebe a `DATABASE_URL` apontando para ele.
 
-- Nome / Network Alias: `boasvindas-db`
-- **Sem** mapeamento de portas para a internet
-- Variáveis: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- Volume persistente obrigatório
+- Hostname na rede Coolify: `app-postgres`
+- Porta: `5432`
+- Database: `boasvindas`
+- **Nunca use o hostname `postgres`** — ele colide com o Postgres interno do
+  próprio Coolify e a API acabaria conectando no banco errado.
+- Sem mapeamento de portas para a internet.
+
+```
+DATABASE_URL=postgresql://<usuario>:<senha>@app-postgres:5432/boasvindas
+```
+
+Se a senha tiver caracteres reservados de URI (`@ : / ? # [ ] %`), grave-a
+percent-encoded na variável.
+
+> `docker-compose.postgres.yml` na raiz existe apenas para quem **ainda não tem**
+> um Postgres (ambiente local ou VPS nova). Não o suba na VPS atual: o
+> `app-postgres` já está no ar e o compose criaria um segundo banco vazio.
 
 ### 6.3 Frontend (`boasvindas-site`)
 
 | Campo | Valor |
 |---|---|
 | Nome | `boasvindas-site` |
-| Build Pack | Nixpacks |
-| Tipo | Static Site |
+| Build Pack | Dockerfile |
 | Base Directory | `/` |
-| Install Command | `npm ci` |
-| Build Command | `npm run build` |
-| Publish Directory | `/dist` |
+| Dockerfile Location | `/Dockerfile` |
 | Port | `80` |
 | Network Alias | `boasvindas-site` |
 
-Variável de build: `VITE_API_BASE_URL` vazia.
+Build arg opcional: `VITE_API_BASE_URL` — deixe **vazia**, que é o padrão do
+Dockerfile. Ela é embutida no bundle e é pública; nunca coloque segredo aí.
 
-O SPA fallback (`try_files $uri $uri/ /index.html`) é aplicado pelo nginx do
-próprio Coolify no modo Static Site. Se você servir `/dist` por conta própria,
-use o [`nginx.conf`](../nginx.conf) da raiz.
+O [`Dockerfile`](../Dockerfile) da raiz é multi-stage: `node:22-alpine` roda
+`npm ci` e `npm run build`, e a imagem final é `nginx:1.29-alpine` servindo só o
+`/dist`. O SPA fallback (`try_files $uri $uri/ /index.html`) vem do
+[`nginx.conf`](../nginx.conf), copiado para `/etc/nginx/conf.d/default.conf`.
+
+> Alternativa: Build Pack **Nixpacks**, tipo **Static Site**, Install
+> `npm ci`, Build `npm run build`, Publish Directory `/dist`. Nesse modo o
+> fallback vem do nginx do próprio Coolify e o `nginx.conf` da raiz não é usado.
 
 ### 6.4 Backend (`boasvindas-api`)
 
@@ -292,6 +327,29 @@ npx drizzle-kit migrate
 ```
 
 As migrations vão dentro da imagem, em `/app/migrations`.
+
+### 6.6 Validando as imagens antes do deploy
+
+Rode uma vez numa máquina com Docker, a partir da **raiz do repositório** (o
+contexto de build é a raiz para os dois Dockerfiles):
+
+```bash
+# Frontend
+docker build -t boasvindas-site:local -f Dockerfile .
+docker run --rm -p 8080:80 boasvindas-site:local
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/app   # 200 (SPA fallback)
+
+# Backend — leia a connection string sem deixá-la no histórico do shell
+read -rs DATABASE_URL && export DATABASE_URL
+export AUTH_SECRET=$(openssl rand -base64 32)
+
+docker build -t boasvindas-api:local -f server/Dockerfile .
+docker run --rm -p 3000:3000 -e DATABASE_URL -e AUTH_SECRET boasvindas-api:local
+curl -s http://localhost:3000/health        # {"status":"ok"}
+```
+
+O `curl` do `/app` é o teste do SPA fallback: sem ele o nginx devolveria 404 em
+qualquer rota que não seja um arquivo real.
 
 ---
 
@@ -419,13 +477,13 @@ pg_dump "$NEON_URL" --no-owner --no-privileges --format=custom -f boasvindas.dum
 scp boasvindas.dump usuario@sua-vps:/tmp/
 
 # 3. Restaure no container do Postgres
-docker cp /tmp/boasvindas.dump boasvindas-db:/tmp/
-docker exec -i boasvindas-db pg_restore \
+docker cp /tmp/boasvindas.dump app-postgres:/tmp/
+docker exec -i app-postgres pg_restore \
   --no-owner --no-privileges \
   -U boasvindas -d boasvindas /tmp/boasvindas.dump
 
 # 4. Aponte a API para o novo banco e redeploy.
-#    DATABASE_URL: veja o formato em .env.example (host = boasvindas-db, porta 5432)
+#    DATABASE_URL: veja o formato em .env.example (host = app-postgres, porta 5432)
 #    DATABASE_SSL: vazio (rede Docker interna, sem TLS)
 ```
 
@@ -464,14 +522,19 @@ O Vite faz proxy de `/api` para `http://localhost:3000`, então o cookie de sess
 
 ```bash
 npm run typecheck              # frontend
-npm test                       # frontend (vitest)
+npm test                       # frontend (vitest, 226 testes)
 npm run build                  # frontend -> /dist
 
 cd server
 npm run typecheck              # backend
-npm test                       # backend (vitest)
+npm test                       # backend (vitest, 36 testes)
 npm run build                  # backend -> server/dist
 ```
+
+`server/src/routes/__tests__/http.test.ts` sobe o app Express de verdade com
+`supertest` e cobre `/health`, `/api/health`, login/logout/sessão, atributos do
+cookie, CRUD de páginas, a página pública e os erros 400/401/404/422/500. O
+Postgres é o único ponto mockado — **nenhum teste abre conexão com banco**.
 
 ---
 
@@ -501,11 +564,15 @@ curl -i -X POST https://boasvindas.online/api/auth/login \
 curl -s https://boasvindas.online/api/public/pages/SEU-SLUG | head -c 300
 ```
 
-> `/health` não fica sob `/api/`, então pelo domínio público ele não é
-> alcançável pela Custom Location `/api/`. Ele existe para o healthcheck interno
-> do Coolify e do Docker, que batem direto em `boasvindas-api:3000/health`. Se
-> quiser expô-lo publicamente, adicione uma Custom Location `/health` ->
-> `boasvindas-api:3000`.
+> A sonda responde nos dois caminhos: `/health`, usado pelo healthcheck interno
+> do Docker e do Coolify (`boasvindas-api:3000/health`), e `/api/health`, que
+> passa pela Custom Location `/api/` e por isso é alcançável pelo domínio
+> público — útil para monitoramento externo:
+>
+> ```bash
+> curl -s https://boasvindas.online/api/health
+> # esperado: {"status":"ok"}
+> ```
 
 Checklist funcional no navegador:
 
@@ -528,7 +595,8 @@ Checklist funcional no navegador:
 | Todas as chamadas de API dão 404 | NPM removendo o prefixo `/api/` | desligue o strip path na Custom Location |
 | CORS bloqueado no navegador | domínio fora de `CORS_ORIGINS` | inclua a origem exata, com esquema, sem barra final |
 | API sai logo após o start | `DATABASE_URL` ou `AUTH_SECRET` ausente | as duas são validadas no boot; veja os logs |
-| `ECONNREFUSED` ao conectar no banco | alias ou rede errada | os três recursos precisam estar na rede `boasvindas` |
+| `ECONNREFUSED` ao conectar no banco | alias ou rede errada | API e `app-postgres` precisam compartilhar a mesma rede Docker |
+| Conecta no banco mas as tabelas não existem | `DATABASE_URL` com host `postgres` | é o Postgres interno do Coolify; use `app-postgres` |
 | erro de TLS no banco | `DATABASE_SSL` incorreto | `require` para Neon, vazio para Postgres na rede Docker |
 | Todos deslogados após um deploy | `AUTH_SECRET` mudou | fixe o valor nas variáveis do recurso |
 | Build do frontend falha por arquivo ausente | `.dockerignore` excluindo demais | ele é compartilhado; não exclua `src/`, `public/`, `index.html`, `vite.config.ts`, `package*.json` |
@@ -537,7 +605,24 @@ Checklist funcional no navegador:
 
 ---
 
-## 13. Netlify
+## 13. Pendências e pontos de atenção
+
+Coisas encontradas na auditoria que **não** bloqueiam o deploy e que foram
+deixadas como estão, para não misturar mudança de comportamento com migração.
+
+| Item | Situação | Ação sugerida |
+|---|---|---|
+| `.env.example` cita `boasvindas-db` | regra local `deny: Write(**/.env.*)` impede a edição automática | trocar `@boasvindas-db:5432` por `@app-postgres:5432` à mão |
+| Autosave do construtor usa `fetch` cru | `src/features/builder/useAutosave.ts` chama `/api/pages/:id` direto, sem o cliente `src/lib/api.ts`. Funciona em produção (mesma origem, cookie first-party), mas ignora `VITE_API_BASE_URL` | migrar para `api.put` se algum dia a API for para outra origem |
+| Imagens Docker não construídas aqui | a máquina de desenvolvimento não tem Docker | rodar `docker build` uma vez antes do primeiro deploy (comandos na seção 6) |
+| `npm audit` do backend: 4 moderadas | vêm do `drizzle-kit` (`esbuild` de desenvolvimento); corrigir exige downgrade quebrando o Drizzle | manter; não vai para a imagem de produção (`--omit=dev`) |
+| Bundle único de ~1,3 MB (375 kB gzip) | sem code splitting; herdado do estado anterior | avaliar `import()` dinâmico no construtor, fora desta migração |
+| `apps/web/` ainda existe em disco | pasta não versionada (0 arquivos no git), resto do app Next.js e do estado local da Netlify | pode apagar quando quiser |
+| `public/next.svg`, `public/vercel.svg` | assets órfãos da era Next.js, ainda copiados para `/dist` | remover quando conveniente |
+
+---
+
+## 14. Netlify
 
 A dependência foi removida por completo:
 

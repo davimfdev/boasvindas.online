@@ -1,8 +1,13 @@
-# Postgres for the VPS, to be added in Coolify as a Docker Compose resource.
+# Optional Postgres, for an environment that does not have one yet (local dev or
+# a fresh VPS). The production VPS ALREADY runs `app-postgres` — do not deploy
+# this there, or you get a second, empty database.
 #
-# The API reaches it by service name on the shared Docker network, so no
+# The API reaches it by container name on the shared Docker network, so no
 # container IP is ever hardcoded:
-#   DATABASE_URL=postgres://boasvindas:SENHA@boasvindas-db:5432/boasvindas
+#   DATABASE_URL=postgresql://boasvindas:SENHA@app-postgres:5432/boasvindas
+#
+# The name is `app-postgres`, never `postgres`: that hostname collides with
+# Coolify's own internal database.
 #
 # This file does NOT migrate any data. See docs/VPS_MIGRATION.md for the
 # Neon -> VPS dump/restore steps.
@@ -10,7 +15,7 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: boasvindas-db
+    container_name: app-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-boasvindas}

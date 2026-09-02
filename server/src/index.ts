@@ -1,11 +1,13 @@
 import { createApp } from './app.js'
-import { config } from './config.js'
+import { config, describeDatabaseTarget } from './config.js'
 import { client } from './db/index.js'
 
 const app = createApp()
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`[api] listening on http://${config.host}:${config.port}`)
+  console.log(`[api] env=${config.isProduction ? 'production' : 'development'}`)
+  console.log(`[api] database -> ${describeDatabaseTarget(config.databaseUrl)}`)
 })
 
 function shutdown(signal: string) {
