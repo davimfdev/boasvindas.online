@@ -17,6 +17,7 @@ FROM node:22-alpine AS prod-deps
 WORKDIR /app
 COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
+RUN apk add --no-cache curl
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
