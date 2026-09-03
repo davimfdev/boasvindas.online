@@ -1,8 +1,17 @@
 # Roadmap — boasvindas.online
 
-> **Sprint inicial (16h):** produto funcionando entregável ao cliente → [SPRINT-16H.md](./SPRINT-16H.md)
-> **Stack real e deploy atual:** [docs/VPS_MIGRATION.md](./docs/VPS_MIGRATION.md)
 > Este roadmap descreve o produto **completo**, após o MVP.
+>
+> | Documento | Para quê |
+> |---|---|
+> | [`PROJECT_STATE.md`](./PROJECT_STATE.md) | o que está rodando **agora**, bloqueadores, próximos 3 |
+> | [`docs/CURRENT_ARCHITECTURE.md`](./docs/CURRENT_ARCHITECTURE.md) | o que existe no código hoje |
+> | [`DECISIONS.md`](./DECISIONS.md) | por que a arquitetura é assim |
+> | [`docs/VPS_MIGRATION.md`](./docs/VPS_MIGRATION.md) | como fazer deploy e validar |
+> | [`SPRINT-16H.md`](./SPRINT-16H.md) | histórico do MVP de 16h |
+>
+> `ARCHITECTURE.md` e `STACK.md` na raiz são **históricos** — descrevem a stack
+> anterior (Next.js/Netlify/Neon). Não os use como referência.
 
 ## Legenda
 - [ ] Pendente
@@ -27,7 +36,7 @@ Next.js") e a versão em produção hoje é outra:
 | Banco | Neon (driver HTTP serverless) | **PostgreSQL** via driver TCP `postgres` + Drizzle — funciona com Neon ou Postgres próprio, hoje aponta para Postgres próprio |
 | Auth | Auth.js v5 | **JWT HS256 (`jose`) em cookie httpOnly**, implementado à mão (Auth.js não roda fora do Next.js) |
 | Deploy | Netlify | **Coolify (VPS própria) + Nginx Proxy Manager**, dois containers Docker (`boasvindas-site`, `boasvindas-api`) + `app-postgres` |
-| Imagens | Backblaze B2 (planejado, nunca implementado) | Ainda não existe upload — ver Fase 1 abaixo |
+| Imagens | Backblaze B2 (planejado, nunca implementado) | **Filesystem persistente** na própria VPS (volume em `/app/media`), com pipeline `sharp` — ver "Mídia" e "Agora" abaixo |
 
 Motivo e detalhes completos da migração: `docs/VPS_MIGRATION.md`, seção 1.
 Este roadmap segue daqui em diante assumindo a arquitetura real. As fases
@@ -48,7 +57,8 @@ Detalhes em [SPRINT-16H.md](./SPRINT-16H.md).
 
 ## Estado atual — o que já está entregue
 
-Verificado diretamente no código em 2026-09-02 (não apenas nos documentos).
+Verificado diretamente no código em 2026-09-02 (não apenas nos documentos) e
+revalidado contra produção em 2026-09-03, no commit `b50ef14`.
 Tudo abaixo roda em produção hoje.
 
 ### Fundação
@@ -115,28 +125,51 @@ Tudo abaixo roda em produção hoje.
 - [ ] SSR/SEO — **regressão consciente**, ver Fase 3 abaixo
 
 ### Testes automatizados
-- [x] **267 testes** no total: 226 no frontend (vitest, 37 arquivos) + 41 no
-      backend (vitest + supertest, 3 arquivos). Confirmado rodando
-      `npm test` na raiz e em `server/` em 2026-09-02.
-      **Nota:** a documentação existente (README.md, VPS_MIGRATION.md) cita
-      "262 testes" (226 + 36) — esse número está defasado; o backend cresceu
-      para 41 desde então. Nenhum teste abre conexão real com banco; o
-      Postgres é mockado em `server/src/routes/__tests__/http.test.ts`.
+- [x] **354 testes** no total: 265 no frontend (vitest, 41 arquivos) + 89 no
+      backend (vitest + supertest, 6 arquivos). Confirmado rodando
+      `npm test` na raiz e em `server/` em 2026-09-03, junto com typecheck e
+      build limpos nos dois pacotes. Nenhum teste abre conexão real com banco;
+      o Postgres é mockado em `server/src/routes/__tests__/`.
+- [x] `PUT /api/pages/:id` com conteúdo que referencia uma imagem enviada está
+      coberto — era o buraco por onde passou o bug do upload.
+- [ ] Nada verifica que as duas cópias de `blocks/schema.ts` (frontend e
+      backend) continuam iguais.
+- [ ] Nenhum teste renderiza o `Inspector` real para um bloco `image`, então a
+      ligação `kind: 'image'` -> `<ImageUpload>` não tem proteção contra
+      regressão.
+- [ ] Sem testes E2E. Sem CI — tudo roda só na máquina de quem lembrar.
+
+### Mídia (entregue e validada em produção)
+- [x] `POST /api/media/upload`, `GET /api/media/:id?w=`, `DELETE /api/media/:id`
+      — `server/src/routes/media.ts`
+- [x] Pipeline `sharp`: WebP q80, teto de 1600px, até 3 variantes
+      (400/800/1600), orientação EXIF aplicada, **metadados e GPS descartados**
+      — `server/src/services/image-pipeline.ts`
+- [x] Validação por magic bytes + decodificação real; nome do arquivo gerado
+      pelo servidor; regex anti path traversal — `services/media-storage.ts`
+- [x] Tabela `media` + migrations `0003` e `0004`, aplicadas
+- [x] Componente de upload (drag & drop + clique) no construtor, mantendo URL
+      colada como fallback — `src/features/builder/ImageUpload.tsx`
+- [x] `srcset` montado no frontend a partir da URL — `src/lib/media.ts`
+- [x] ✅ **A imagem enviada é salva e sobrevive ao reload** (`4d3869e`), e ao
+      redeploy, graças ao volume persistente. Fluxo validado em produção
+- [ ] Upload no `hero.imageUrl` — o campo é `kind: 'text'` em `fields.ts`, então
+      a imagem de capa (a mais visível da página) ainda exige colar URL externa
+- [ ] Remoção de mídia órfã: `DELETE /api/media/:id` existe e é testado, mas
+      **nenhuma linha do frontend o chama**; apagar a página remove as linhas
+      por cascade e deixa os arquivos. O disco cresce de forma monotônica
+- [ ] Cota de armazenamento por página, usuário ou plano
 
 ### Não entregue (confirmado por ausência no código)
-- [ ] **Upload de imagens** — o bloco `image` exige `url: z.string().url()`;
-      não existe rota de upload, bucket S3/B2 nem componente de drag & drop
-      de arquivo. O anfitrião hospeda a foto em outro serviço e cola o link.
 - [ ] **Analytics** — nenhuma dependência (Sentry, PostHog, Plausible) e
       nenhum contador de visitas no schema (`server/src/db/schema.ts` só tem
       `users` e `pages`).
 - [ ] **Exportação PDF** — não encontrada.
 - [ ] **Domínio customizado / subdomínio por cliente** — não encontrado.
 - [ ] **Multi-idioma** — não encontrado.
-- [ ] **Templates por tipo de imóvel** (praia, montanha, urbano) — existe
-      `src/lib/blocks/templates.ts`, mas é um **conteúdo padrão único**
-      aplicado a página nova, não uma biblioteca de templates selecionável
-      como o roadmap antigo descrevia.
+- [ ] **Seletor de templates** — `src/lib/blocks/templates.ts` já define **três**
+      (`apeCompleto`, `enxuto`, `emBranco`), mas só `apeCompleto` é usado:
+      toda página nasce igual e não há tela para escolher. Falta só a UI.
 - [ ] **Colaboração** (convidar co-host) — não encontrada.
 - [ ] **Monetização** — nenhuma dependência de pagamento (Stripe ou
       equivalente), nenhuma rota de billing, nenhuma seção de preços na
@@ -145,23 +178,82 @@ Tudo abaixo roda em produção hoje.
 
 ---
 
-## Fase 1 — Upload de Imagens (prioridade máxima)
+## Agora — solidez (antes de qualquer feature nova)
 
-**Por quê primeiro:** o usuário-alvo é o dono do imóvel, não alguém técnico.
-Hoje ele precisa abrir outro serviço (Google Fotos, Imgur), publicar a foto
-lá e colar o link no bloco de imagem. Esse é o maior atrito do produto atual
-e bloqueia a experiência que o produto promete ("monte seu guia em minutos").
+**Por quê primeiro:** o upload de imagens já funciona em produção, mas não há
+nenhuma proteção contra abuso — nem rate limiting, nem cota de armazenamento — e
+o produto ainda não enxerga os próprios erros. Construir features em cima disso
+multiplica o problema.
 
-- [ ] Escolher destino de armazenamento (opções: Backblaze B2 + Cloudflare
-      na frente, como o roadmap original previa; ou S3-compatível na própria
-      VPS/Coolify; ou disco local do container com volume persistente)
-- [ ] `POST /api/media/upload` no Express — validação de MIME e tamanho
-      (≤ 10MB sugerido)
-- [ ] Componente de upload no builder (drag & drop + clique), substituindo
-      o campo de URL colada no bloco `image` (mantendo URL como fallback)
-- [ ] Redimensionamento/otimização no upload (evitar imagens de câmera de
-      10+ MB indo direto para a página pública)
-- [ ] Remoção de mídia órfã ao trocar/apagar imagem
+Estado detalhado e IDs dos bloqueadores em [`PROJECT_STATE.md`](./PROJECT_STATE.md).
+
+### Bloqueadores
+- [x] ✅ **BLK-1 — Validação de URL de mídia corrigida** (`4d3869e`). O contrato
+      aceita `/api/media/<uuid>` em `image`, `hero` e `carousel`, nas duas
+      cópias do schema, sem aceitar caminhos relativos arbitrários. Validado em
+      produção: upload → autosave → reload mantém a imagem
+- [x] ✅ **BLK-2 — Volume `/app/media` confirmado.** É um named volume do
+      Docker; uma mídia continuou devolvendo 200 depois de um redeploy que
+      recriou o container da API
+- [ ] 🔴 **BLK-3 — Rate limiting** em `login`, `register` e `upload`, mais cota
+      de armazenamento por usuário. **É o próximo item técnico.** Deixou de ser
+      risco teórico agora que o upload funciona em produção
+
+### Fechar o ciclo de vida da mídia
+- [ ] Chamar `DELETE /api/media/:id` no construtor ao trocar ou limpar a imagem
+- [ ] Rotina de faxina de órfãos (arquivos sem linha correspondente em `media`)
+- [ ] Upload no `hero.imageUrl` (trocar `kind: 'text'` por `'image'` em
+      `fields.ts`)
+
+### Remover a causa-raiz estrutural
+- [ ] **Eliminar a duplicação de `blocks/schema.ts` e `templates.ts`** entre
+      frontend e backend. São cópias mantidas à mão; foi o que permitiu o BLK-1.
+      Um pacote local, um passo de build, ou no mínimo um teste que falhe
+      quando divergirem
+
+### Buracos de produto que travam o usuário
+- [ ] **UI para deletar página** — o endpoint `DELETE /api/pages/:id` existe e é
+      testado, mas `api.del` nunca é chamado no frontend. Hoje um slug errado
+      fica preso para sempre
+- [ ] **Recuperação de senha** — quem esquece a senha perde a conta e todas as
+      páginas publicadas. Bloqueante antes de cobrar assinatura
+- [ ] Editar o slug depois de criado
+- [ ] Tratar `401` no autosave: sessão expirada durante a edição hoje falha em
+      silêncio e o trabalho se perde (`src/features/builder/useAutosave.ts`,
+      que ainda usa `fetch` cru em vez do cliente `src/lib/api.ts`)
+
+### Visibilidade
+- [ ] **Monitoramento de erros** (Sentry ou equivalente) na API e no frontend —
+      hoje um `500` só aparece no `console.error` do container, e ninguém fica
+      sabendo
+- [ ] **CI no GitHub Actions**: typecheck + testes + build nos dois pacotes.
+      Tudo já roda; falta um gatilho que não dependa de lembrar
+- [ ] ESLint configurado (há `eslint-disable` no código e nenhum ESLint instalado)
+
+### Higiene do repositório
+- [ ] Apagar o código morto em `src/features/guest/`: `Apartment.tsx`,
+      `Home.tsx`, `CheckIn.tsx`, `CheckOut.tsx`, `Rules.tsx`, `LocalGuide.tsx`,
+      `Emergency.tsx`, `guest-data.tsx` (~800 linhas, nada os importa)
+- [ ] Apagar `apps/` (31 MB, não versionada, inclui um cluster Postgres local da
+      era Netlify em `apps/web/.netlify/db/`)
+- [ ] Apagar `public/next.svg` e `public/vercel.svg`
+- [ ] Corrigir `.env.example`: trocar `@boasvindas-db:5432` por
+      `@app-postgres:5432` e acrescentar `MEDIA_DIR` e `MEDIA_MAX_BYTES`
+      (edição manual — o arquivo é protegido por regra local)
+
+---
+
+## Fase 1b — Mobile do anfitrião
+
+**Por quê:** a página do hóspede é mobile-first, mas o construtor é
+desktop-only — `Builder.tsx` usa um grid de 3 colunas dentro de um container
+`overflow-hidden` de altura de viewport, que abaixo de `md` empilha os painéis
+sem scroll próprio. O anfitrião tira as fotos no celular e não consegue montar
+a página nele.
+
+- [ ] Layout do construtor em abas no mobile (Blocos / Preview / Ajustes)
+- [ ] Revisar o `h-screen` do `GuestSite` no Safari iOS (a barra de URL come
+      parte da viewport e corta o conteúdo)
 
 ---
 
@@ -287,9 +379,27 @@ Verificado em `src/pages/HomePage.tsx` (198 linhas, com animações GSAP):
 - [ ] Toggle de idioma para o hóspede
 
 ### Biblioteca de Templates
-- [ ] Expandir `src/lib/blocks/templates.ts` de "um conteúdo padrão" para
-      múltiplos templates por tipo de imóvel: praia, montanha, urbano, rural
+- [ ] **Tela de escolha de template na criação da página** — os três templates
+      já existem em `src/lib/blocks/templates.ts`, falta a UI. É o item de maior
+      retorno pelo menor esforço em todo este roadmap
+- [ ] Expandir para templates por tipo de imóvel: praia, montanha, urbano, rural
 - [ ] Aplicar template → preenche seções com conteúdo de exemplo editável
+
+### Compartilhamento (buraco identificado na auditoria)
+Hoje o QR Code só existe **dentro** da página do hóspede: para conseguir o QR
+que vai imprimir e colar na parede, o anfitrião precisa abrir a própria página
+pública. É o caso de uso central do produto e não tem caminho direto no
+dashboard.
+- [ ] Botão "copiar link" no card da página
+- [ ] Baixar QR Code em PNG e em PDF pronto para impressão
+- [ ] "Enviar ao hóspede pelo WhatsApp" com mensagem pré-formatada
+- [ ] Pré-visualizar rascunho como o hóspede veria (hoje "Ver página" mostra
+      "Em breve" enquanto não publicado)
+
+### Onboarding
+- [ ] Checklist de "o que falta antes de publicar", detectando os placeholders
+      que a página nova traz intactos (`troque-esta-senha`, `Endereço do imóvel`)
+- [ ] Gerenciar conta: trocar senha, trocar e-mail, apagar conta (LGPD)
 
 ### Colaboração
 - [ ] Convidar co-host por email
@@ -316,10 +426,17 @@ Verificado em `src/pages/HomePage.tsx` (198 linhas, com animações GSAP):
 
 - [ ] Testes de carga na API Express (k6)
 - [ ] Lighthouse score ≥ 90 em todas as páginas públicas
-- [ ] Rate limiting nas rotas de API
-- [ ] Revisão de segurança (OWASP top 10, headers HTTP, CSRF) — `helmet` já
-      está em uso (`server/src/app.ts`); falta rate limiting e revisão formal
-- [ ] Monitoramento de erros (Sentry ou equivalente — hoje não há nenhum)
+- [x] ~~Rate limiting nas rotas de API~~ → **movido para "Agora"** (BLK-3): é
+      risco de disponibilidade hoje, não item de pré-lançamento
+- [x] ~~Monitoramento de erros~~ → **movido para "Agora"**
+- [ ] Revisão de segurança formal (OWASP top 10, headers HTTP, CSP afinada).
+      Já existe: `helmet`, CORS restrito, cookie httpOnly/Secure/SameSite=Lax,
+      bcrypt 12, 404-em-vez-de-403, schemes perigosos bloqueados no schema.
+      Falta: revisão formal e revogação de sessão (o JWT é stateless, 30 dias)
+- [ ] Decidir explicitamente se páginas de hóspede devem ser indexáveis — hoje
+      `GuestPage` marca `robots: index, follow` em toda página publicada, e
+      `public/robots.txt` é um `Allow: /` genérico. São páginas com senha de
+      Wi-Fi e código de portão
 - [ ] Beta fechado com 10–20 hosts reais
 - [ ] Ajustes pós-beta
 - [ ] Lançamento público
@@ -330,16 +447,23 @@ Verificado em `src/pages/HomePage.tsx` (198 linhas, com animações GSAP):
 
 ```
 Estado atual (fundação, auth, CRUD, builder, temas, publicação — entregue)
-  ├─► Fase 1 (upload de imagens)         ← maior atrito do usuário hoje
-  ├─► Fase 2 (monetização)               ← nenhuma cobrança existe
-  ├─► Fase 3 (SSR/SEO)                   ← regressão conhecida, priorizar
-  │                                         se o marketing (Fase 4) depender
-  │                                         de SEO orgânico
-  ├─► Fase 4 (homepage marketing)        ← preços só depois da Fase 2 real
-  └─► Fase 5 (extras)                    ← pode ser paralela às anteriores
-        └─► Fase 6 (lançamento)
+  │
+  └─► AGORA (solidez)                    ← bloqueia tudo: zero proteção contra
+        │                                   abuso (BLK-3) e nenhuma visibilidade
+        │                                   de erro em produção
+        ├─► Fase 1b (mobile do anfitrião)
+        ├─► Fase 2 (monetização)          ← nenhuma cobrança existe
+        ├─► Fase 3 (SSR/SEO)              ← regressão conhecida, priorizar se o
+        │                                    marketing (Fase 4) depender de SEO
+        ├─► Fase 4 (homepage marketing)   ← preços só depois da Fase 2 real
+        └─► Fase 5 (extras)               ← pode ser paralela às anteriores
+              └─► Fase 6 (lançamento)
 ```
 
-Fases 1, 2 e 3 não têm dependência forte entre si e podem avançar em
-paralelo. Fase 4 depende parcialmente da Fase 2 (não prometer preço que não
-cobra) e se beneficia da Fase 3 se SEO for parte da estratégia de aquisição.
+**"Agora" vem antes de tudo** — não é uma fase paralela. O upload está quebrado
+em produção, o volume de mídia não foi confirmado, e não existe rate limiting.
+
+Depois disso, Fases 1b, 2 e 3 não têm dependência forte entre si e podem
+avançar em paralelo. Fase 4 depende parcialmente da Fase 2 (não prometer preço
+que não cobra) e se beneficia da Fase 3 se SEO for parte da estratégia de
+aquisição.

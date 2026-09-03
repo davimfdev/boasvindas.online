@@ -1,5 +1,19 @@
 # Architecture — boasvindas.online
 
+> ## ⚠️ DOCUMENTO HISTÓRICO — NÃO USE COMO REFERÊNCIA
+>
+> Este arquivo descreve a arquitetura **anterior**: Next.js 15 App Router,
+> Netlify, Neon, Auth.js v5, Backblaze B2, Turborepo. **Nada disso está em uso.**
+> O projeto migrou para SPA React/Vite + API Express em VPS própria no commit
+> `78e637f`.
+>
+> **A arquitetura atual está em [`docs/CURRENT_ARCHITECTURE.md`](./docs/CURRENT_ARCHITECTURE.md).**
+>
+> O que ainda vale deste arquivo: a tabela de **monetização** (seção "Modelo de
+> Monetização"), que segue sendo a intenção de produto vigente e está espelhada
+> no [`ROADMAP.md`](./ROADMAP.md), Fase 2. Todo o resto — stack, fluxos, código
+> de exemplo, middleware — está obsoleto.
+
 > **MVP (16h):** diagrama marcado com ⚡ é o que estará no ar ao final do sprint.
 > Plano de execução: [SPRINT-16H.md](./SPRINT-16H.md)
 

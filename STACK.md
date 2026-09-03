@@ -1,5 +1,18 @@
 # Stack — boasvindas.online
 
+> ## ⚠️ DOCUMENTO HISTÓRICO — NÃO USE COMO REFERÊNCIA
+>
+> Este arquivo descreve a stack **planejada em 2026-05**: Next.js 15, Netlify,
+> Neon, Auth.js v5, Backblaze B2 + Cloudflare, Turborepo + pnpm, Framer Motion,
+> TanStack Query. **Nada disso está em uso.**
+>
+> **A stack atual está em [`docs/CURRENT_ARCHITECTURE.md`](./docs/CURRENT_ARCHITECTURE.md)**,
+> e os motivos de cada troca em [`DECISIONS.md`](./DECISIONS.md).
+>
+> O que ainda vale deste arquivo: as listas de **temas** e de **fontes**
+> planejados, úteis como referência de design. Hoje existem 6 presets de tema
+> (`src/lib/theme/presets.ts`) e 25 fontes (`src/lib/theme/fonts.ts`).
+
 > **MVP (16h):** subconjunto marcado com ⚡. Restante é produto completo.
 > Plano de execução das 16h: [SPRINT-16H.md](./SPRINT-16H.md)
 

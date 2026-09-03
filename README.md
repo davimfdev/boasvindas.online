@@ -8,11 +8,15 @@ Produção: **https://boasvindas.online**
 
 - Cadastro e login de anfitriões (sessão JWT em cookie httpOnly)
 - Dashboard para criar, publicar e gerenciar páginas
-- Página pública do hóspede em `/:slug`
-- 7 seções fixas: boas-vindas, apartamento, check-in, regras, guia local, check-out, emergência
-- 2 temas via CSS variables: **Modern** (teal/amber) e **Rustic** (terra/madeira)
-- QR Code e botão de WhatsApp flutuante
-- Design responsivo, mobile-first
+- Construtor visual drag-and-drop com autosave, undo/redo e **18 tipos de bloco**
+- Seções livres: o anfitrião cria, renomeia e reordena as que quiser
+- Página pública do hóspede em `/:slug`, com busca interna
+- **6 presets de tema** + 25 fontes + cores customizáveis, via CSS variables
+- QR Code (da página e do Wi-Fi) e botão de WhatsApp flutuante
+- Design responsivo, mobile-first na página do hóspede
+
+Estado real de cada área, incluindo o que está quebrado:
+[PROJECT_STATE.md](./PROJECT_STATE.md).
 
 ## Stack
 
@@ -109,6 +113,16 @@ O NPM roteia `/` para o site e `/api/` para a API, no mesmo domínio. Passo a
 passo completo, variáveis de ambiente, migração do banco e troubleshooting em
 [docs/VPS_MIGRATION.md](./docs/VPS_MIGRATION.md).
 
-## Roadmap
+## Documentação
 
-Visão completa do produto e fases em [ROADMAP.md](./ROADMAP.md). O escopo do MVP entregue está em [SPRINT-16H.md](./SPRINT-16H.md).
+| Documento | Para quê |
+|---|---|
+| [PROJECT_STATE.md](./PROJECT_STATE.md) | o que está rodando agora, bloqueadores, próximos 3 |
+| [docs/CURRENT_ARCHITECTURE.md](./docs/CURRENT_ARCHITECTURE.md) | o que existe no código hoje |
+| [DECISIONS.md](./DECISIONS.md) | por que a arquitetura é assim |
+| [ROADMAP.md](./ROADMAP.md) | para onde o produto vai |
+| [docs/VPS_MIGRATION.md](./docs/VPS_MIGRATION.md) | runbook de deploy e validação |
+| [SPRINT-16H.md](./SPRINT-16H.md) | histórico: escopo do MVP de 16h |
+
+`ARCHITECTURE.md` e `STACK.md` na raiz são **históricos** — descrevem a stack
+anterior (Next.js/Netlify/Neon) e não devem ser usados como referência.

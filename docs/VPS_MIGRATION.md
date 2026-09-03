@@ -1,7 +1,13 @@
 # Migração para VPS própria (Coolify + Nginx Proxy Manager)
 
-Este documento descreve a arquitetura do boasvindas.online depois da saída da
-Netlify, como fazer o deploy e como validar que tudo está no ar.
+Este documento é o **runbook de deploy**: como colocar no ar, como configurar e
+como validar. A migração em si está concluída.
+
+> Documentos irmãos:
+> [`CURRENT_ARCHITECTURE.md`](./CURRENT_ARCHITECTURE.md) (o que existe no código) ·
+> [`../DECISIONS.md`](../DECISIONS.md) (por que é assim) ·
+> [`../PROJECT_STATE.md`](../PROJECT_STATE.md) (o que está rodando agora) ·
+> [`../ROADMAP.md`](../ROADMAP.md) (para onde vai)
 
 ---
 
@@ -127,7 +133,7 @@ server/
     index.ts            listen + shutdown gracioso
     app.ts              middlewares e montagem de rotas
     config.ts           leitura e validacao de env (falha no boot)
-    routes/             health, auth, pages, public, update-schema
+    routes/             health, auth, pages, public, media, update-schema
     middleware/         require-auth, error
     services/           session (JWT), password (bcrypt), page-content
     db/                 client postgres-js + schema Drizzle
@@ -351,9 +357,16 @@ Variáveis: todas as do bloco backend da seção 5.
 > com o monitoramento todo verde. `/health/ready` executa um `select 1` real e
 > devolve 503 quando o banco não responde.
 
-> **O volume em `/app/media` é obrigatório se houver upload de imagens.** Sem
-> ele, todo redeploy apaga as fotos que os anfitriões enviaram — o container é
-> recriado do zero a cada build.
+> **O volume em `/app/media` é obrigatório.** Sem ele, todo redeploy apaga as
+> fotos que os anfitriões enviaram — o container é recriado do zero a cada build
+> — enquanto as linhas de `media` continuam no banco apontando para arquivos que
+> não existem mais.
+>
+> Hoje é um **named volume do Docker** gerenciado pelo Coolify, e a persistência
+> já foi verificada: uma mídia que devolvia 200 continuou devolvendo 200 depois
+> de um redeploy que recriou o container da API com outro nome. Para repetir a
+> verificação, guarde uma URL `/api/media/<uuid>` que responda 200, faça o
+> redeploy e chame a mesma URL.
 
 > O contexto de build é a **raiz** do repositório, e o Dockerfile copia apenas
 > `server/`. O `.dockerignore` na raiz é compartilhado pelos dois recursos e por
@@ -362,11 +375,12 @@ Variáveis: todas as do bloco backend da seção 5.
 
 ### 6.5 Migrations
 
-Elas não rodam sozinhas no start. **Pendentes agora: a `0003`, que cria a tabela
-`media`, e a `0004`, que acrescenta `width`, `height` e `variants` a ela** — sem
-as duas, toda chamada de upload devolve 500. A `0004` só adiciona colunas
-anuláveis, então é segura de aplicar independente do que já rodou. Após o deploy
-da API, num shell do container `boasvindas-api`:
+Elas não rodam sozinhas no start. **As cinco migrations existentes (`0000` a
+`0004`) já foram aplicadas em produção** — a `0003` criou a tabela `media` e a
+`0004` acrescentou `width`, `height` e `variants` a ela.
+
+Para qualquer migration nova, depois do deploy da API, num shell do container
+`boasvindas-api`:
 
 ```bash
 npx drizzle-kit migrate
@@ -425,6 +439,49 @@ Force SSL
 HTTP/2
 ```
 
+### Resolução dinâmica de DNS na Custom Location `/api/`
+
+**Obrigatório.** Por padrão o nginx resolve o hostname do upstream **uma vez**,
+quando carrega a configuração, e guarda o IP. O Coolify recria o container da
+API a cada deploy, com IP novo — então, depois de um rolling deploy, o proxy
+segue apontando para um container que não existe mais e **todo `/api/` devolve
+502 até alguém executar `nginx -s reload` à mão**.
+
+A saída é fazer o nginx resolver o nome **em runtime**, pelo DNS interno do
+Docker, passando o upstream por uma **variável** no `proxy_pass` — é a variável
+que desliga a resolução única de carregamento da configuração:
+
+```nginx
+resolver 127.0.0.11 valid=5s ipv6=off;
+set $api_backend boasvindas-api;
+
+location ^~ /api/ {
+    client_max_body_size 12m;
+
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_pass http://$api_backend:3000;
+}
+```
+
+- `127.0.0.11` é o DNS embutido do Docker. `valid=5s` define a validade do
+  resultado no cache do resolver: a entrada é reaproveitada por até 5 segundos e
+  depois reconsultada, então o proxy acompanha a troca de IP em poucos segundos
+  sem consultar o DNS em toda requisição.
+- **Não troque `$api_backend` pelo nome literal.** É a presença da variável que
+  força a resolução em runtime; com o hostname literal o nginx volta a resolver
+  só ao carregar a configuração e o 502 pós-deploy reaparece.
+- **O `proxy_pass` não leva URI nem barra final** — é `http://$api_backend:3000`
+  e nada mais. O prefixo `/api/` pertence ao `location ^~ /api/`; sem URI no
+  `proxy_pass`, o nginx repassa o caminho original intacto e o Express recebe
+  `/api/...` como registrou suas rotas. Acrescentar uma barra ou um caminho ali
+  faria o nginx reescrever a URI e o prefixo se perderia.
+- Validado: depois de um redeploy que recriou o container da API,
+  `/api/health/ready` continuou 200 sem nenhum reload manual do nginx.
+
 Pontos críticos:
 
 - **Não remova o prefixo `/api/`.** O Express registra as rotas com ele. Se o NPM
@@ -477,10 +534,11 @@ restore são passos manuais seus.
 
 ### Situação
 
-- Banco: **PostgreSQL**, hoje na **Neon** (`@neondatabase/serverless`, driver HTTP).
+- Banco: **PostgreSQL na própria VPS**, container `app-postgres`, driver TCP
+  `postgres` (postgres-js). **A saída da Neon está concluída.**
 - ORM: **Drizzle**.
-- Tabelas: `users` e `pages` — ver `server/src/db/schema.ts`.
-- Migrations: 3 arquivos em `server/migrations/`.
+- Tabelas: `users`, `pages` e `media` — ver `server/src/db/schema.ts`.
+- Migrations: 5 arquivos em `server/migrations/`, todos aplicados.
 - Não há Supabase, MySQL, SQLite nem MongoDB neste projeto.
 
 ### Schema
@@ -507,9 +565,21 @@ pages
   created_at timestamptz default now()
   updated_at timestamptz default now()
   index pages_user_id_idx (user_id)
+
+media
+  id         uuid  PK, default random
+  page_id    uuid  FK -> pages.id, on delete cascade, not null
+  filename   text  not null        -- a variante mais larga
+  mime_type  text  not null        -- sempre 'image/webp'
+  size_bytes integer not null
+  width      integer               -- anulaveis: linhas anteriores a 0004
+  height     integer
+  variants   jsonb                 -- [{width, file, sizeBytes}]
+  created_at timestamptz default now()
+  index media_page_id_idx (page_id)
 ```
 
-### Neon -> Postgres na VPS
+### Neon -> Postgres na VPS (histórico — já executado)
 
 O driver já foi trocado para `postgres` (TCP), que fala tanto com a Neon quanto
 com um Postgres próprio. **A migração é só uma troca de `DATABASE_URL`** depois
@@ -573,14 +643,17 @@ O Vite faz proxy de `/api` para `http://localhost:3000`, então o cookie de sess
 
 ```bash
 npm run typecheck              # frontend
-npm test                       # frontend (vitest, 244 testes)
+npm test                       # frontend (vitest, 265 testes em 41 arquivos)
 npm run build                  # frontend -> /dist
 
 cd server
 npm run typecheck              # backend
-npm test                       # backend (vitest, 64 testes)
+npm test                       # backend (vitest, 89 testes em 6 arquivos)
 npm run build                  # backend -> server/dist
 ```
+
+Contagens conferidas em 2026-09-02, commit `6b357d7`. Ao mudá-las, atualize
+também `../PROJECT_STATE.md` e `../ROADMAP.md`.
 
 `server/src/routes/__tests__/http.test.ts` sobe o app Express de verdade com
 `supertest` e cobre `/health`, `/api/health`, login/logout/sessão, atributos do
@@ -644,6 +717,9 @@ Checklist funcional no navegador:
 | Login responde 200 mas continua deslogado | cookie `Secure` descartado | confirme `X-Forwarded-Proto` no NPM e `trust proxy` na API |
 | 404 em `/app` ou `/:slug` ao recarregar | SPA fallback ausente | Publish Directory `/dist` e tipo Static Site; ou use o `nginx.conf` |
 | Todas as chamadas de API dão 404 | NPM removendo o prefixo `/api/` | desligue o strip path na Custom Location |
+| `/api/` inteiro dá 502 logo após um deploy da API, e `nginx -s reload` resolve | o nginx guardou o IP do container antigo | use a resolução dinâmica de DNS da seção 7 (`resolver` + `$api_backend` no `proxy_pass`) |
+| Build do backend falha em `npm ci` com "package.json and package-lock.json are in sync" | lockfile dessincronizado do `package.json` | em `server/`, rode `npm install --package-lock-only` e commite o lockfile; não troque `npm ci` por `npm install` no Dockerfile |
+| Upload de imagem devolve 413 antes de chegar ao Express | `client_max_body_size` do NPM no padrão de 1 MB | suba para 12m na Custom Location `/api/` |
 | CORS bloqueado no navegador | domínio fora de `CORS_ORIGINS` | inclua a origem exata, com esquema, sem barra final |
 | API sai logo após o start | `DATABASE_URL` ou `AUTH_SECRET` ausente | as duas são validadas no boot; veja os logs |
 | `ECONNREFUSED` ao conectar no banco | alias ou rede errada | API e `app-postgres` precisam compartilhar a mesma rede Docker |
@@ -661,16 +737,19 @@ Checklist funcional no navegador:
 Coisas encontradas na auditoria que **não** bloqueiam o deploy e que foram
 deixadas como estão, para não misturar mudança de comportamento com migração.
 
+> **Bloqueadores ativos ficam em [`../PROJECT_STATE.md`](../PROJECT_STATE.md)**,
+> não aqui. Hoje resta um: não há rate limiting nem cota de upload (BLK-3).
+
 | Item | Situação | Ação sugerida |
 |---|---|---|
 | `.env.example` cita `boasvindas-db` e não tem `MEDIA_DIR`/`MEDIA_MAX_BYTES` | regra local `deny: Write(**/.env.*)` impede a edição automática | trocar `@boasvindas-db:5432` por `@app-postgres:5432` e acrescentar as duas variáveis de mídia da seção 5 |
-| Imagens órfãs no volume | apagar uma página remove as linhas de `media` por cascade, mas não os arquivos; limpar a URL no construtor também não chama `DELETE /api/media/:id` | o disco cresce de forma monotônica; criar uma rotina de limpeza antes que isso importe |
+| Imagens órfãs no volume | apagar uma página remove as linhas de `media` por cascade, mas não os arquivos; limpar a URL no construtor também não chama `DELETE /api/media/:id` | o disco cresce de forma monotônica; criar uma rotina de limpeza antes que isso importe. Passou a valer de verdade agora que o upload funciona em produção |
 | Sem cota nem rate limit no upload | qualquer anfitrião autenticado pode encher o volume 10 MB por vez | avaliar limite por página/usuário junto com a monetização |
 | Autosave do construtor usa `fetch` cru | `src/features/builder/useAutosave.ts` chama `/api/pages/:id` direto, sem o cliente `src/lib/api.ts`. Funciona em produção (mesma origem, cookie first-party), mas ignora `VITE_API_BASE_URL` | migrar para `api.put` se algum dia a API for para outra origem |
 | Imagens Docker não construídas aqui | a máquina de desenvolvimento não tem Docker | rodar `docker build` uma vez antes do primeiro deploy (comandos na seção 6) |
 | `npm audit` do backend: 4 moderadas | vêm do `drizzle-kit` (`esbuild` de desenvolvimento); corrigir exige downgrade quebrando o Drizzle | manter; não vai para a imagem de produção (`--omit=dev`) |
-| Bundle único de ~1,3 MB (375 kB gzip) | sem code splitting; herdado do estado anterior | avaliar `import()` dinâmico no construtor, fora desta migração |
-| `apps/web/` ainda existe em disco | pasta não versionada (0 arquivos no git), resto do app Next.js e do estado local da Netlify | pode apagar quando quiser |
+| ~~Bundle único de ~1,3 MB~~ | **Resolvido.** Há code splitting por rota (`React.lazy` em `src/App.tsx`) e um chunk fixo para o vendor React. Maior chunk hoje: 189,6 kB (59,6 kB gzip) | — |
+| `apps/web/` ainda existe em disco | pasta não versionada (0 arquivos no git), **31 MB**, resto do app Next.js e do estado local da Netlify (inclui um cluster Postgres inteiro em `apps/web/.netlify/db/`) | pode apagar quando quiser |
 | `public/next.svg`, `public/vercel.svg` | assets órfãos da era Next.js, ainda copiados para `/dist` | remover quando conveniente |
 
 ---
