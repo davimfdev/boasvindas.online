@@ -10,6 +10,11 @@ import {
   signSessionToken,
 } from '../services/session.js'
 import { isUniqueViolation } from '../middleware/error.js'
+import {
+  loginAccountLimiter,
+  loginIpLimiter,
+  registerLimiter,
+} from '../middleware/rate-limit.js'
 
 export const authRouter: Router = Router()
 
@@ -24,7 +29,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, email, pwd } = registerSchema.parse({
       name:  req.body?.name,
@@ -64,7 +69,7 @@ authRouter.post('/register', async (req, res) => {
   }
 })
 
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', loginIpLimiter, loginAccountLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(401).json({ error: { code: 'CREDENTIALS', message: 'Email ou senha incorretos' } })

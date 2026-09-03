@@ -6,6 +6,7 @@ import { config } from '../config.js'
 import { db } from '../db/index.js'
 import { media, pages, type MediaVariant } from '../db/schema.js'
 import { requireAuth } from '../middleware/require-auth.js'
+import { uploadLimiter } from '../middleware/rate-limit.js'
 import { deleteMedia, MediaNotFoundError, readMedia, saveMedia } from '../services/media-storage.js'
 import { processImage, type ProcessedImage } from '../services/image-pipeline.js'
 
@@ -37,7 +38,10 @@ const upload = multer({
 
 const maxMegabytes = Math.round(config.mediaMaxBytes / (1024 * 1024))
 
-mediaRouter.post('/upload', requireAuth, receiveFile, async (req, res) => {
+// uploadLimiter sits between the session check and multer: it needs req.user
+// for its key, and rejecting here keeps an over-limit request from buffering
+// megabytes of multipart body before it is refused.
+mediaRouter.post('/upload', requireAuth, uploadLimiter, receiveFile, async (req, res) => {
   const file = req.file
   if (!file) {
     res.status(400).json({ error: { code: 'VALIDATION', message: 'Selecione uma imagem para enviar' } })
