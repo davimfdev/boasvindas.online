@@ -28,7 +28,17 @@ const STORED_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 export async function saveMedia(bytes: Buffer, extension: string): Promise<string> {
   const filename = `${randomUUID()}.${extension}`
   await mkdir(config.mediaDir, { recursive: true })
-  await writeFile(resolveStored(filename), bytes)
+
+  try {
+    await writeFile(resolveStored(filename), bytes)
+  } catch (err) {
+    // writeFile creates the object before it finishes writing it, so a failure
+    // here can leave a truncated file behind. The name was generated in this
+    // scope and is never returned on this path, so no caller could remove it.
+    await deleteMedia(filename)
+    throw err
+  }
+
   return filename
 }
 
