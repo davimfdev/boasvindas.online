@@ -8,13 +8,19 @@ import request from 'supertest'
 // boundary these tests stub, by pointing MEDIA_DIR at a throwaway directory.
 const { setRows, setRowsPerQuery, dbMock, clientMock } = vi.hoisted(() => {
   let rows: unknown[] = []
-  let queue: unknown[][] = []
+  let queue: (unknown[] | Error)[] = []
 
   const nextRows = () => (queue.length > 0 ? queue.shift()! : rows)
 
   const chain: Record<string, unknown> = {
-    then: (resolve: (value: unknown[]) => unknown, reject?: (reason: unknown) => unknown) =>
-      Promise.resolve(nextRows()).then(resolve, reject),
+    // An Error in the queue stands for a query that fails, which is how the
+    // insert is made to break without reaching for a real Postgres.
+    then: (resolve: (value: unknown[]) => unknown, reject?: (reason: unknown) => unknown) => {
+      const next = nextRows()
+      return next instanceof Error
+        ? Promise.reject(next).then(resolve, reject)
+        : Promise.resolve(next).then(resolve, reject)
+    },
   }
   for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'innerJoin']) {
     chain[method] = () => chain
@@ -23,13 +29,41 @@ const { setRows, setRowsPerQuery, dbMock, clientMock } = vi.hoisted(() => {
 
   return {
     setRows: (next: unknown[]) => { rows = next; queue = [] },
-    setRowsPerQuery: (next: unknown[][]) => { rows = []; queue = [...next] },
+    setRowsPerQuery: (next: (unknown[] | Error)[]) => { rows = []; queue = [...next] },
     dbMock: { select: entry, insert: entry, update: entry, delete: entry },
     clientMock: Object.assign(async () => [{ '?column?': 1 }], { end: async () => {} }),
   }
 })
 
 vi.mock('../../db/index.js', () => ({ db: dbMock, client: clientMock }))
+
+/**
+ * Lets a test fail the Nth call to saveMedia while the calls before it write
+ * real files, which is what makes the route's cleanup observable on disk.
+ * deleteMedia stays real, so the assertions read the actual directory.
+ */
+const { failSaveAfter, resetSaveGate, passSaveGate } = vi.hoisted(() => {
+  let remaining = Number.POSITIVE_INFINITY
+  return {
+    failSaveAfter: (calls: number) => { remaining = calls },
+    resetSaveGate: () => { remaining = Number.POSITIVE_INFINITY },
+    passSaveGate: () => {
+      if (remaining <= 0) throw Object.assign(new Error('no space left on device'), { code: 'ENOSPC' })
+      remaining -= 1
+    },
+  }
+})
+
+vi.mock('../../services/media-storage.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/media-storage.js')>()
+  return {
+    ...actual,
+    saveMedia: async (bytes: Buffer, extension: string) => {
+      passSaveGate()
+      return actual.saveMedia(bytes, extension)
+    },
+  }
+})
 
 const MEDIA_DIR = mkdtempSync(path.join(os.tmpdir(), 'bv-media-'))
 process.env.MEDIA_DIR = MEDIA_DIR
@@ -77,6 +111,7 @@ function ownedPageThenInsert() {
 
 beforeEach(async () => {
   setRows([])
+  resetSaveGate()
   // See http.test.ts: the rate limiters keep state across cases otherwise.
   await resetRateLimitersForTests()
 })
@@ -389,5 +424,88 @@ describe('DELETE /api/pages/:id removes the media files of the page', () => {
     ownedPageWith([row])
     const res = await deletePage()
     expect(res.status).toBe(204)
+  })
+})
+
+describe('POST /api/media/upload takes back what it wrote when it fails', () => {
+  /** The photo yields two variants, 400 and 500, so a later write can fail. */
+  async function uploadPhoto() {
+    return request(app)
+      .post('/api/media/upload')
+      .set('Cookie', await sessionCookie())
+      .field('pageId', PAGE_ID)
+      .attach('file', PHOTO, 'foto.png')
+  }
+
+  /** Silences the error handler's log line and hands back what it was given. */
+  function captureUnhandled() {
+    return vi.spyOn(console, 'error').mockImplementation(() => {})
+  }
+
+  it('keeps every file of an upload that succeeded', async () => {
+    ownedPageThenInsert()
+    const before = readdirSync(MEDIA_DIR).length
+    await uploadPhoto()
+    expect(readdirSync(MEDIA_DIR).length).toBe(before + 2)
+  })
+
+  it('removes the variant already written when a later write fails', async () => {
+    ownedPageThenInsert()
+    failSaveAfter(1)
+    const before = readdirSync(MEDIA_DIR).length
+    const logged = captureUnhandled()
+    await uploadPhoto()
+    logged.mockRestore()
+    expect(readdirSync(MEDIA_DIR).length).toBe(before)
+  })
+
+  it('removes every file written when the insert fails', async () => {
+    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    const before = readdirSync(MEDIA_DIR).length
+    const logged = captureUnhandled()
+    await uploadPhoto()
+    logged.mockRestore()
+    expect(readdirSync(MEDIA_DIR).length).toBe(before)
+  })
+
+  // What Postgres raises when the page is deleted while the upload is in flight.
+  it('removes every file when the page disappears mid-upload', async () => {
+    const violation = Object.assign(
+      new Error('insert or update on table "media" violates foreign key constraint'),
+      { code: '23503' },
+    )
+    setRowsPerQuery([[{ id: PAGE_ID }], violation])
+    const before = readdirSync(MEDIA_DIR).length
+    const logged = captureUnhandled()
+    await uploadPhoto()
+    logged.mockRestore()
+    expect(readdirSync(MEDIA_DIR).length).toBe(before)
+  })
+
+  it('answers 500 INTERNAL when the insert fails', async () => {
+    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    const logged = captureUnhandled()
+    const res = await uploadPhoto()
+    logged.mockRestore()
+    expect(res.body).toEqual({ error: { code: 'INTERNAL' } })
+  })
+
+  // Cleaning up must not swallow or replace the failure the client is told about.
+  it('hands the original failure to the error handler, not a cleanup failure', async () => {
+    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    const logged = captureUnhandled()
+    await uploadPhoto()
+    const reported = logged.mock.calls[0]?.[1]
+    logged.mockRestore()
+    expect(reported).toMatchObject({ message: 'o insert falhou' })
+  })
+
+  it('leaves a file stored by an earlier upload untouched', async () => {
+    const earlier = await saveMedia(STORED_BYTES, 'webp')
+    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    const logged = captureUnhandled()
+    await uploadPhoto()
+    logged.mockRestore()
+    expect(readdirSync(MEDIA_DIR)).toContain(earlier)
   })
 })

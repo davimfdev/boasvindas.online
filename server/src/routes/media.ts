@@ -82,32 +82,48 @@ mediaRouter.post('/upload', requireAuth, uploadLimiter, receiveFile, async (req,
   }
 
   const variants: MediaVariant[] = []
-  for (const variant of processed.variants) {
-    variants.push({
-      width: variant.width,
-      file: await saveMedia(variant.bytes, 'webp'),
-      sizeBytes: variant.bytes.length,
-    })
+  let widest: MediaVariant
+  let mediaId: string
+
+  // From the first write until the row exists, the objects on disk are known to
+  // nobody: no row points at them and the client has no id. Anything that fails
+  // in between has to take them back, or they stay forever.
+  try {
+    for (const variant of processed.variants) {
+      variants.push({
+        width: variant.width,
+        file: await saveMedia(variant.bytes, 'webp'),
+        sizeBytes: variant.bytes.length,
+      })
+    }
+
+    widest = variants[variants.length - 1]
+    const [row] = await db
+      .insert(media)
+      .values({
+        pageId,
+        filename: widest.file,
+        mimeType: SERVED_MIME_TYPE,
+        sizeBytes: widest.sizeBytes,
+        width: processed.width,
+        height: processed.height,
+        variants,
+      })
+      .returning({ id: media.id })
+    mediaId = row.id
+  } catch (err) {
+    // deleteMedia never throws, so the failure the client is told about stays
+    // the one that actually happened rather than a failure to clean up.
+    for (const variant of variants) await deleteMedia(variant.file)
+    throw err
   }
 
-  const widest = variants[variants.length - 1]
-  const [row] = await db
-    .insert(media)
-    .values({
-      pageId,
-      filename: widest.file,
-      mimeType: SERVED_MIME_TYPE,
-      sizeBytes: widest.sizeBytes,
-      width: processed.width,
-      height: processed.height,
-      variants,
-    })
-    .returning({ id: media.id })
-
+  // Past this point the row is committed and owns these files: nothing here may
+  // delete them.
   res.status(201).json({
     media: {
-      id: row.id,
-      url: `/api/media/${row.id}`,
+      id: mediaId,
+      url: `/api/media/${mediaId}`,
       mimeType: SERVED_MIME_TYPE,
       sizeBytes: widest.sizeBytes,
       width: processed.width,
