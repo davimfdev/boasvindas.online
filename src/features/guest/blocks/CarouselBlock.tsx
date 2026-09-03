@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Block } from '@/lib/blocks/schema'
+import { MEDIA_SIZES, mediaSrcSet } from '@/lib/media'
 import type { RenderCtx } from './BlockRenderer'
 
 type Img = { url: string; alt: string; caption?: string }
@@ -37,7 +38,14 @@ export function CarouselBlock({ block }: { block: Block; ctx: RenderCtx }) {
         {images.map((img, idx) => (
           <figure key={idx} className="shrink-0 w-full h-full relative flex items-center justify-center overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element -- guest pages use plain <img>, consistent with ImageBlock */}
-            <img src={img.url} alt={img.alt} className="max-w-full max-h-full w-auto h-auto object-contain" loading="lazy" />
+            <img
+              src={img.url}
+              srcSet={mediaSrcSet(img.url)}
+              sizes={mediaSrcSet(img.url) ? MEDIA_SIZES : undefined}
+              alt={img.alt}
+              className="max-w-full max-h-full w-auto h-auto object-contain"
+              loading="lazy"
+            />
             {img.caption && (
               <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent text-white text-xs p-3">
                 {img.caption}

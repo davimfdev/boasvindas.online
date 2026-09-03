@@ -27,11 +27,15 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // FormData carries its own multipart Content-Type with a boundary the browser
+  // generates; declaring JSON over it would make the body unparseable.
+  const isJsonBody = !!init.body && !(init.body instanceof FormData)
+
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: 'include',
     headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(isJsonBody ? { 'Content-Type': 'application/json' } : {}),
       ...init.headers,
     },
   })
@@ -54,4 +58,5 @@ export const api = {
   put:  <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   del:  <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 }

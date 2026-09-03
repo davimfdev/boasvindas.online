@@ -1,6 +1,6 @@
 import type { BlockType } from './schema'
 
-export type FieldKind = 'text' | 'textarea' | 'number' | 'select' | 'list' | 'icon' | 'tags'
+export type FieldKind = 'text' | 'textarea' | 'number' | 'select' | 'list' | 'icon' | 'tags' | 'image'
 
 export interface FieldDef {
   key: string
@@ -39,7 +39,7 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   ],
   text: [{ key: 'text', label: 'Texto', kind: 'textarea' }],
   image: [
-    { key: 'url', label: 'URL da imagem', kind: 'text' },
+    { key: 'url', label: 'URL da imagem', kind: 'image' },
     { key: 'alt', label: 'Descrição (alt)', kind: 'text' },
     { key: 'caption', label: 'Legenda', kind: 'text' },
   ],
@@ -122,7 +122,7 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   ],
   carousel: [
     { key: 'images', label: 'Imagens', kind: 'list', itemFields: [
-      { key: 'url', label: 'URL da imagem', kind: 'text' },
+      { key: 'url', label: 'URL da imagem', kind: 'image' },
       { key: 'alt', label: 'Descrição (alt)', kind: 'text' },
       { key: 'caption', label: 'Legenda', kind: 'text' } ] },
   ],
