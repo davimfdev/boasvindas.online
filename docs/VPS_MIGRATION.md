@@ -141,6 +141,10 @@ server/
 |---|---|---|---|---|
 | GET | `/health` | — | — | `200 {"status":"ok"}` |
 | GET | `/api/health` | — | — | `200 {"status":"ok"}` (mesma sonda, alcançável pelo proxy) |
+| GET | `/health/ready` · `/api/health/ready` | — | — | `200 {"status":"ok","database":"ok"}` · `503 {"status":"degraded","database":"unreachable"}` |
+| POST | `/api/media/upload` | sessão + dono | multipart: `pageId` + `file` | `201 {media:{id,url,mimeType,sizeBytes}}` · `400` · `401` · `404` · `413 FILE_TOO_LARGE` · `415 UNSUPPORTED_MEDIA_TYPE` |
+| GET | `/api/media/:id?w=400\|800\|1600` | — | — | `200` + bytes WebP, `Cache-Control: immutable` · `404`. Sem `w`, serve a maior variante |
+| DELETE | `/api/media/:id` | sessão + dono | — | `204` · `401` · `404` |
 | POST | `/api/auth/register` | — | `{name,email,password}` | `201 {user}` · `400 VALIDATION` · `409 EMAIL_EXISTS` |
 | POST | `/api/auth/login` | — | `{email,password}` | `200 {user}` + cookie · `401 CREDENTIALS` |
 | POST | `/api/auth/logout` | — | — | `204` + cookie limpo |
@@ -154,6 +158,32 @@ server/
 | GET | `/api/public/pages/:slug` | — | — | `200 {page}` · `404` |
 
 Envelope de erro preservado do Next.js: `{"error":{"code":"...","message":"..."}}`.
+
+### Processamento de imagens
+
+Toda imagem enviada é reprocessada no upload por `services/image-pipeline.ts`
+(`sharp`) antes de encostar no disco. O original **não** é guardado.
+
+- Reduzida para no máximo **1600px** no maior lado.
+- Gravada em até **três larguras** (400, 800, 1600), nunca ampliada: um original
+  de 900px produz 400 e 900.
+- Convertida para **WebP** com qualidade 80.
+- **Orientação EXIF aplicada**, senão foto em retrato de celular chega deitada.
+- **Metadados removidos**, incluindo o **GPS**. Sem isso, a página pública do
+  hóspede publicaria a coordenada exata do imóvel embutida na foto.
+
+O frontend monta o `srcset` a partir da própria URL (`src/lib/media.ts`), então
+o navegador baixa a largura que a tela precisa. Uma URL externa colada pelo
+anfitrião continua funcionando como antes, sem `srcset` — não temos as variantes.
+
+Medido com uma imagem de ruído aleatório 4000×3000, que é o **pior caso** de
+compressão (foto real fica bem abaixo): original de 9,4 MB → 767 kB na variante
+de 1600px, 125 kB na de 800px, em ~1,8 s. Fotos reais ficam na casa de 150–300 kB
+a 1600px.
+
+O `w` da query só **escolhe entre variantes já gravadas** — nunca dispara um
+redimensionamento sob demanda, para que nenhuma requisição consiga fazer o
+servidor trabalhar à toa.
 
 ### Mapeamento das URLs antigas
 
@@ -213,6 +243,8 @@ Template completo em [`.env.example`](../.env.example). Resumo:
 | `PUBLIC_ORIGIN` | não | padrão `https://boasvindas.online` |
 | `SESSION_COOKIE_NAME` | não | padrão `bv_session` |
 | `SESSION_MAX_AGE` | não | segundos; padrão `2592000` (30 dias) |
+| `MEDIA_DIR` | não | diretório das imagens enviadas; padrão `/app/media`. Em produção é o ponto de montagem do volume persistente. Fora de container, aponte para um caminho gravável |
+| `MEDIA_MAX_BYTES` | não | maior upload aceito; padrão `10485760` (10 MB) |
 | `HOST` / `PORT` | não | padrão `0.0.0.0` / `3000` |
 | `NODE_ENV` | sim em produção | `production` ativa o cookie `Secure` |
 
@@ -307,10 +339,21 @@ O [`Dockerfile`](../Dockerfile) da raiz é multi-stage: `node:22-alpine` roda
 | Base Directory | `/` |
 | Dockerfile Location | `/server/Dockerfile` |
 | Port | `3000` |
-| Health Check Path | `/health` |
+| Health Check Path | `/health/ready` |
+| Volume persistente | `/app/media` (imagens enviadas pelos anfitriões) |
 | Network Alias | `boasvindas-api` |
 
 Variáveis: todas as do bloco backend da seção 5.
+
+> **Use `/health/ready` no healthcheck, não `/health`.** `/health` só prova que o
+> processo está de pé: ele responde 200 mesmo com o Postgres inacessível. Foi
+> exatamente assim que uma indisponibilidade total do banco passou despercebida
+> com o monitoramento todo verde. `/health/ready` executa um `select 1` real e
+> devolve 503 quando o banco não responde.
+
+> **O volume em `/app/media` é obrigatório se houver upload de imagens.** Sem
+> ele, todo redeploy apaga as fotos que os anfitriões enviaram — o container é
+> recriado do zero a cada build.
 
 > O contexto de build é a **raiz** do repositório, e o Dockerfile copia apenas
 > `server/`. O `.dockerignore` na raiz é compartilhado pelos dois recursos e por
@@ -319,8 +362,11 @@ Variáveis: todas as do bloco backend da seção 5.
 
 ### 6.5 Migrations
 
-Elas não rodam sozinhas no start. Após o primeiro deploy da API, num shell do
-container `boasvindas-api`:
+Elas não rodam sozinhas no start. **Pendentes agora: a `0003`, que cria a tabela
+`media`, e a `0004`, que acrescenta `width`, `height` e `variants` a ela** — sem
+as duas, toda chamada de upload devolve 500. A `0004` só adiciona colunas
+anuláveis, então é segura de aplicar independente do que já rodou. Após o deploy
+da API, num shell do container `boasvindas-api`:
 
 ```bash
 npx drizzle-kit migrate
@@ -387,12 +433,17 @@ Pontos críticos:
   sem eles o `trust proxy` não enxerga o HTTPS e o cookie `Secure` é descartado:
 
   ```nginx
+  client_max_body_size 12m;
   proxy_set_header Host              $host;
   proxy_set_header X-Real-IP         $remote_addr;
   proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
   proxy_set_header X-Forwarded-Proto $scheme;
   ```
 
+- **Aumente o `client_max_body_size` da Custom Location `/api/` para pelo menos
+  12 MB.** O padrão do NPM é 1 MB: um upload de imagem de 3 MB morre no proxy,
+  com uma página HTML de 413 que nunca chega ao Express — e o erro no navegador
+  não se parece nada com o problema real.
 - Use os **network aliases**, nunca IPs de container.
 - O NPM precisa estar na mesma rede Docker (`boasvindas`) dos dois recursos.
 
@@ -522,12 +573,12 @@ O Vite faz proxy de `/api` para `http://localhost:3000`, então o cookie de sess
 
 ```bash
 npm run typecheck              # frontend
-npm test                       # frontend (vitest, 226 testes)
+npm test                       # frontend (vitest, 244 testes)
 npm run build                  # frontend -> /dist
 
 cd server
 npm run typecheck              # backend
-npm test                       # backend (vitest, 36 testes)
+npm test                       # backend (vitest, 64 testes)
 npm run build                  # backend -> server/dist
 ```
 
@@ -612,7 +663,9 @@ deixadas como estão, para não misturar mudança de comportamento com migraçã
 
 | Item | Situação | Ação sugerida |
 |---|---|---|
-| `.env.example` cita `boasvindas-db` | regra local `deny: Write(**/.env.*)` impede a edição automática | trocar `@boasvindas-db:5432` por `@app-postgres:5432` à mão |
+| `.env.example` cita `boasvindas-db` e não tem `MEDIA_DIR`/`MEDIA_MAX_BYTES` | regra local `deny: Write(**/.env.*)` impede a edição automática | trocar `@boasvindas-db:5432` por `@app-postgres:5432` e acrescentar as duas variáveis de mídia da seção 5 |
+| Imagens órfãs no volume | apagar uma página remove as linhas de `media` por cascade, mas não os arquivos; limpar a URL no construtor também não chama `DELETE /api/media/:id` | o disco cresce de forma monotônica; criar uma rotina de limpeza antes que isso importe |
+| Sem cota nem rate limit no upload | qualquer anfitrião autenticado pode encher o volume 10 MB por vez | avaliar limite por página/usuário junto com a monetização |
 | Autosave do construtor usa `fetch` cru | `src/features/builder/useAutosave.ts` chama `/api/pages/:id` direto, sem o cliente `src/lib/api.ts`. Funciona em produção (mesma origem, cookie first-party), mas ignora `VITE_API_BASE_URL` | migrar para `api.put` se algum dia a API for para outra origem |
 | Imagens Docker não construídas aqui | a máquina de desenvolvimento não tem Docker | rodar `docker build` uma vez antes do primeiro deploy (comandos na seção 6) |
 | `npm audit` do backend: 4 moderadas | vêm do `drizzle-kit` (`esbuild` de desenvolvimento); corrigir exige downgrade quebrando o Drizzle | manter; não vai para a imagem de produção (`--omit=dev`) |
