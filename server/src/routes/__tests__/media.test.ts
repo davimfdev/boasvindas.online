@@ -303,3 +303,91 @@ describe('DELETE /api/media/:id', () => {
     expect(res.status).toBe(401)
   })
 })
+
+describe('DELETE /api/pages/:id removes the media files of the page', () => {
+  /** A row as the upload pipeline writes it: one object per width, and filename repeating the widest. */
+  async function storedMediaRow() {
+    const small = await saveMedia(Buffer.alloc(100, 1), 'webp')
+    const large = await saveMedia(Buffer.alloc(900, 2), 'webp')
+    return {
+      filename: large,
+      variants: [
+        { width: 400, file: small, sizeBytes: 100 },
+        { width: 1600, file: large, sizeBytes: 900 },
+      ],
+    }
+  }
+
+  /** The three queries the route runs: owned page, its media rows, the delete. */
+  function ownedPageWith(rows: unknown[]) {
+    setRowsPerQuery([[{ id: PAGE_ID, userId: USER.id }], rows, []])
+  }
+
+  async function deletePage() {
+    return request(app).delete(`/api/pages/${PAGE_ID}`).set('Cookie', await sessionCookie())
+  }
+
+  it('answers 204 for the owner', async () => {
+    ownedPageWith([await storedMediaRow()])
+    const res = await deletePage()
+    expect(res.status).toBe(204)
+  })
+
+  it('removes the widest stored file', async () => {
+    const row = await storedMediaRow()
+    ownedPageWith([row])
+    await deletePage()
+    expect(readdirSync(MEDIA_DIR)).not.toContain(row.filename)
+  })
+
+  // filename alone would leave every narrower width on disk.
+  it('removes the narrow variant as well, not only filename', async () => {
+    const row = await storedMediaRow()
+    ownedPageWith([row])
+    await deletePage()
+    expect(readdirSync(MEDIA_DIR)).not.toContain(row.variants[0].file)
+  })
+
+  // The lookup is scoped by pageId, so a file the query never returned must survive.
+  it('leaves a file belonging to another page untouched', async () => {
+    const other = await saveMedia(STORED_BYTES, 'webp')
+    ownedPageWith([await storedMediaRow()])
+    await deletePage()
+    expect(readdirSync(MEDIA_DIR)).toContain(other)
+  })
+
+  it('answers 404 for a page the user does not own', async () => {
+    setRows([])
+    const res = await deletePage()
+    expect(res.status).toBe(404)
+  })
+
+  it('removes nothing when the page is not owned', async () => {
+    const untouched = await saveMedia(STORED_BYTES, 'webp')
+    setRows([])
+    await deletePage()
+    expect(readdirSync(MEDIA_DIR)).toContain(untouched)
+  })
+
+  it('removes the filename of a legacy row written before variants existed', async () => {
+    const filename = await saveMedia(STORED_BYTES, 'webp')
+    ownedPageWith([{ filename, variants: null }])
+    await deletePage()
+    expect(readdirSync(MEDIA_DIR)).not.toContain(filename)
+  })
+
+  it('answers 204 for a page that has no media at all', async () => {
+    ownedPageWith([])
+    const res = await deletePage()
+    expect(res.status).toBe(204)
+  })
+
+  // Cleanup is best effort: a file already gone must not fail the request.
+  it('answers 204 when a stored file is already missing', async () => {
+    const row = await storedMediaRow()
+    rmSync(path.join(MEDIA_DIR, row.filename))
+    ownedPageWith([row])
+    const res = await deletePage()
+    expect(res.status).toBe(204)
+  })
+})

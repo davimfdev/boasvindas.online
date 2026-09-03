@@ -2,11 +2,12 @@ import { Router } from 'express'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { pages } from '../db/schema.js'
+import { media, pages } from '../db/schema.js'
 import { updateSchema } from './update-schema.js'
 import { generateSlug, isSlugReserved, isSlugValid } from '../utils/slug.js'
 import { isUniqueViolation } from '../middleware/error.js'
 import { requireAuth } from '../middleware/require-auth.js'
+import { deleteMedia } from '../services/media-storage.js'
 
 export const pagesRouter: Router = Router()
 
@@ -131,7 +132,24 @@ pagesRouter.delete('/:id', async (req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND' } })
     return
   }
+
+  // The rows go away with the page through the foreign key cascade, and that
+  // runs inside Postgres — so the filenames have to be read here, while the
+  // rows still exist. After the delete there is no way back to them.
+  const rows = await db
+    .select({ filename: media.filename, variants: media.variants })
+    .from(media)
+    .where(eq(media.pageId, req.params.id))
+
   await db.delete(pages).where(eq(pages.id, req.params.id))
+
+  // Same shape as DELETE /api/media/:id: every width is a separate object, and
+  // filename repeats the widest variant, so the set collapses that duplicate.
+  const files = new Set(
+    rows.flatMap((row) => [row.filename, ...(row.variants ?? []).map((v) => v.file)]),
+  )
+  for (const file of files) await deleteMedia(file)
+
   res.status(204).end()
 })
 
