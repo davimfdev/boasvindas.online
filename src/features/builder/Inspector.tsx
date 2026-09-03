@@ -1,9 +1,11 @@
+import { useParams } from 'react-router-dom'
 import { MousePointerClick } from 'lucide-react'
 import { BLOCK_FIELDS, BLOCK_META, type FieldDef } from '@/lib/blocks/fields'
 import { Icon } from '@/features/guest/blocks/Icon'
 import type { BuilderStore } from './store'
 import { useBuilder } from './store'
 import { IconPicker } from './IconPicker'
+import { ImageUpload } from './ImageUpload'
 
 function EmptyState() {
   return (
@@ -21,6 +23,9 @@ interface Props {
 }
 
 export function Inspector({ store }: Props) {
+  // The builder always runs under /app/:id/edit, so the route carries the page
+  // the uploader must attribute images to.
+  const { id: pageId } = useParams()
   const selectedBlockId = useBuilder(store, (s) => s.selectedBlockId)
   const content = useBuilder(store, (s) => s.content)
 
@@ -50,7 +55,9 @@ export function Inspector({ store }: Props) {
   function renderField(field: FieldDef) {
     const rawValue = props[field.key]
 
-    if (field.kind === 'text' || field.kind === 'number') {
+    // An `image` field is a URL field that also accepts an upload: pasting an
+    // external link keeps working exactly as before.
+    if (field.kind === 'text' || field.kind === 'number' || field.kind === 'image') {
       const value = rawValue === undefined || rawValue === null ? '' : String(rawValue)
       const inputId = `field-${blockId}-${field.key}`
       return (
@@ -69,6 +76,13 @@ export function Inspector({ store }: Props) {
             }}
             aria-label={field.label}
           />
+          {field.kind === 'image' && (
+            <ImageUpload
+              value={value}
+              pageId={pageId}
+              onChange={(url) => update({ [field.key]: url })}
+            />
+          )}
         </div>
       )
     }
@@ -196,6 +210,7 @@ export function Inspector({ store }: Props) {
                         </div>
                       )
                     }
+                    const subText = subVal === undefined || subVal === null ? '' : String(subVal)
                     return (
                       <div key={subField.key} className="flex flex-col gap-0.5">
                         <label htmlFor={subId} className="text-xs text-muted-foreground">
@@ -204,10 +219,13 @@ export function Inspector({ store }: Props) {
                         <input
                           id={subId}
                           className="rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          value={subVal === undefined || subVal === null ? '' : String(subVal)}
+                          value={subText}
                           aria-label={subField.label}
                           onChange={(e) => setSubValue(e.target.value)}
                         />
+                        {subField.kind === 'image' && (
+                          <ImageUpload value={subText} pageId={pageId} onChange={setSubValue} />
+                        )}
                       </div>
                     )
                   })}
