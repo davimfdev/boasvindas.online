@@ -39,6 +39,7 @@ const { createApp } = await import('../../app.js')
 const { saveMedia } = await import('../../services/media-storage.js')
 const { signSessionToken } = await import('../../services/session.js')
 const { config } = await import('../../config.js')
+const { resetRateLimitersForTests } = await import('../../middleware/rate-limit.js')
 
 const app = createApp()
 
@@ -74,8 +75,10 @@ function ownedPageThenInsert() {
   setRowsPerQuery([[{ id: PAGE_ID }], [{ id: MEDIA_ID }]])
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   setRows([])
+  // See http.test.ts: the rate limiters keep state across cases otherwise.
+  await resetRateLimitersForTests()
 })
 
 afterAll(() => {

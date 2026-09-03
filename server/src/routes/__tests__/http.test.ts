@@ -51,6 +51,7 @@ const { createApp } = await import('../../app.js')
 const { hashPassword } = await import('../../services/password.js')
 const { signSessionToken } = await import('../../services/session.js')
 const { config } = await import('../../config.js')
+const { resetRateLimitersForTests } = await import('../../middleware/rate-limit.js')
 
 const app = createApp()
 
@@ -60,9 +61,12 @@ async function sessionCookie(): Promise<string> {
   return `${config.sessionCookieName}=${await signSessionToken(USER)}`
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   setRows([])
   setDatabaseUp(true)
+  // The limiters are module singletons: without this, hits from one case would
+  // count against the next and the order of tests would decide their result.
+  await resetRateLimitersForTests()
 })
 
 describe('health', () => {
