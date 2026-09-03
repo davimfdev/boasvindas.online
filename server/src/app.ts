@@ -7,6 +7,7 @@ import { attachUser } from './middleware/require-auth.js'
 import { errorHandler, notFound } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
 import { healthRouter } from './routes/health.js'
+import { mediaRouter } from './routes/media.js'
 import { pagesRouter } from './routes/pages.js'
 import { publicRouter } from './routes/public.js'
 
@@ -33,10 +34,13 @@ export function createApp(): Express {
 
   // No signed webhooks exist in this API, so a JSON parser is safe globally.
   // Mount raw-body handlers ahead of this line if one is ever added.
+  // Image uploads are exempt from that rule: express.json only consumes bodies
+  // whose Content-Type is JSON, so a multipart stream still reaches multer intact.
   app.use(express.json({ limit: '1mb' }))
   app.use(attachUser)
 
   app.use('/api/auth', authRouter)
+  app.use('/api/media', mediaRouter)
   app.use('/api/pages', pagesRouter)
   app.use('/api/public', publicRouter)
 

@@ -22,6 +22,20 @@
       "when": 1781415936633,
       "tag": "0002_windy_maelstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788373210090,
+      "tag": "0003_lyrical_wind_dancer",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788385960382,
+      "tag": "0004_worried_zuras",
+      "breakpoints": true
     }
   ]
 }

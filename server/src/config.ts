@@ -42,4 +42,12 @@ export const config = {
   publicOrigin: process.env.PUBLIC_ORIGIN ?? 'https://boasvindas.online',
   sessionCookieName: process.env.SESSION_COOKIE_NAME ?? 'bv_session',
   sessionMaxAgeSeconds: Number(process.env.SESSION_MAX_AGE ?? 60 * 60 * 24 * 30),
+  /**
+   * Directory holding uploaded guest-page images. In production this is the
+   * mount point of a persistent Coolify volume; outside it, set MEDIA_DIR to a
+   * writable path so a local run never reaches for a container-only directory.
+   */
+  mediaDir: process.env.MEDIA_DIR ?? '/app/media',
+  /** Largest upload accepted, in bytes. */
+  mediaMaxBytes: Number(process.env.MEDIA_MAX_BYTES ?? 10 * 1024 * 1024),
 } as const
