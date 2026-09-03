@@ -34,6 +34,11 @@ COPY --from=build /app/dist ./dist
 COPY server/package.json ./package.json
 COPY server/migrations ./migrations
 
+# Uploaded images live here. Coolify mounts a persistent volume over this path;
+# creating it owned by `node` keeps the unprivileged user able to write either way.
+ENV MEDIA_DIR=/app/media
+RUN mkdir -p /app/media && chown node:node /app/media
+
 # node:alpine already provides an unprivileged `node` user.
 USER node
 

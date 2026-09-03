@@ -3,10 +3,11 @@ import request from 'supertest'
 
 // Postgres is the one system boundary these tests mock: every route is exercised
 // for real, but no socket is opened and no database is touched.
-const { setRows, setRowsPerQuery, setFailure, dbMock } = vi.hoisted(() => {
+const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock } = vi.hoisted(() => {
   let rows: unknown[] = []
   let queue: unknown[][] = []
   let failure: Error | null = null
+  let databaseUp = true
 
   const nextRows = () => (queue.length > 0 ? queue.shift()! : rows)
 
@@ -21,17 +22,30 @@ const { setRows, setRowsPerQuery, setFailure, dbMock } = vi.hoisted(() => {
   }
   const entry = () => chain
 
+  // Stands in for the `postgres` tagged-template client: readiness calls it as
+  // `client\`select 1\``, so the mock must be callable, not just an object.
+  const clientMock = Object.assign(
+    async (_strings: TemplateStringsArray, ..._values: unknown[]) => {
+      if (!databaseUp) throw new Error('connection to app-postgres failed: password authentication')
+      return [{ '?column?': 1 }]
+    },
+    { end: async () => {} },
+  )
+
   return {
     /** Same rows for every query the route runs. */
     setRows: (next: unknown[]) => { rows = next; queue = []; failure = null },
     /** One entry per query, in the order the route runs them. */
     setRowsPerQuery: (next: unknown[][]) => { rows = []; queue = [...next]; failure = null },
     setFailure: (error: Error) => { failure = error },
+    /** Controls what the tagged-template client mock does for `select 1`. */
+    setDatabaseUp: (next: boolean) => { databaseUp = next },
     dbMock: { select: entry, insert: entry, update: entry, delete: entry },
+    clientMock,
   }
 })
 
-vi.mock('../../db/index.js', () => ({ db: dbMock, client: { end: async () => {} } }))
+vi.mock('../../db/index.js', () => ({ db: dbMock, client: clientMock }))
 
 const { createApp } = await import('../../app.js')
 const { hashPassword } = await import('../../services/password.js')
@@ -48,6 +62,7 @@ async function sessionCookie(): Promise<string> {
 
 beforeEach(() => {
   setRows([])
+  setDatabaseUp(true)
 })
 
 describe('health', () => {
@@ -59,6 +74,34 @@ describe('health', () => {
   it('answers behind the reverse proxy at /api/health', async () => {
     const res = await request(app).get('/api/health')
     expect(res.status).toBe(200)
+  })
+
+  it('answers 200 with database ok at /health/ready when the database responds', async () => {
+    const res = await request(app).get('/health/ready')
+    expect(res.body).toEqual({ status: 'ok', database: 'ok' })
+  })
+
+  it('answers 503 with database unreachable at /health/ready when the database fails', async () => {
+    setDatabaseUp(false)
+    const res = await request(app).get('/health/ready')
+    expect(res.status).toBe(503)
+  })
+
+  it('reports degraded status in the body when the database fails', async () => {
+    setDatabaseUp(false)
+    const res = await request(app).get('/health/ready')
+    expect(res.body).toEqual({ status: 'degraded', database: 'unreachable' })
+  })
+
+  it('never leaks the underlying driver error in the readiness response body', async () => {
+    setDatabaseUp(false)
+    const res = await request(app).get('/health/ready')
+    expect(JSON.stringify(res.body)).not.toContain('app-postgres')
+  })
+
+  it('answers the readiness probe behind the reverse proxy at /api/health/ready', async () => {
+    const res = await request(app).get('/api/health/ready')
+    expect(res.body).toEqual({ status: 'ok', database: 'ok' })
   })
 })
 

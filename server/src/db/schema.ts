@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import type { PageContent } from '../lib/blocks/schema.js'
 
 export const users = pgTable('users', {
@@ -26,7 +26,31 @@ export const pages = pgTable('pages', {
   index('pages_user_id_idx').on(t.userId),
 ])
 
+/** One stored file per rendered width, produced by services/image-pipeline. */
+export interface MediaVariant {
+  width: number
+  file: string
+  sizeBytes: number
+}
+
+export const media = pgTable('media', {
+  id:        uuid('id').primaryKey().defaultRandom(),
+  pageId:    uuid('page_id').references(() => pages.id, { onDelete: 'cascade' }).notNull(),
+  /** The widest variant: what `GET /api/media/:id` serves without a `w` query. */
+  filename:  text('filename').notNull(),
+  mimeType:  text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  width:     integer('width'),
+  height:    integer('height'),
+  variants:  jsonb('variants').$type<MediaVariant[]>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index('media_page_id_idx').on(t.pageId),
+])
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Page = typeof pages.$inferSelect
 export type NewPage = typeof pages.$inferInsert
+export type Media = typeof media.$inferSelect
+export type NewMedia = typeof media.$inferInsert
