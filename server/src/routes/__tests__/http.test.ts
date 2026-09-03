@@ -261,6 +261,37 @@ describe('pages (protected)', () => {
     expect(res.body.page.subtitle).toBe('Vista para o mar')
   })
 
+  // End-to-end guard for the bug that made every upload look like it worked and
+  // then vanish: the builder autosaves the relative URL the upload returned.
+  it('saves page content that references an uploaded image', async () => {
+    const content = {
+      nav: 'buttons',
+      sections: [{ id: 's1', title: 'Início', icon: 'Home', blocks: [
+        { id: 'b1', type: 'image', props: { url: '/api/media/33333333-3333-4333-8333-333333333333', alt: '' } },
+      ] }],
+    }
+    const page = { id: 'page-1', slug: 'minha-suite', title: 'Minha Suíte' }
+    setRowsPerQuery([[page], [{ ...page, content }]])
+    const res = await request(app)
+      .put('/api/pages/page-1')
+      .set('Cookie', await sessionCookie())
+      .send({ content })
+    expect(res.status).toBe(200)
+  })
+
+  it('rejects page content with an arbitrary relative image path', async () => {
+    setRowsPerQuery([[{ id: 'page-1', slug: 'minha-suite', title: 'Minha Suíte' }]])
+    const res = await request(app)
+      .put('/api/pages/page-1')
+      .set('Cookie', await sessionCookie())
+      .send({ content: { nav: 'buttons', sections: [
+        { id: 's1', title: 'Início', icon: 'Home', blocks: [
+          { id: 'b1', type: 'image', props: { url: '/foo/bar', alt: '' } },
+        ] },
+      ] } })
+    expect(res.body.error.code).toBe('VALIDATION')
+  })
+
   it('toggles a draft to published', async () => {
     const page = { id: 'page-1', slug: 'minha-suite', title: 'Minha Suíte', status: 'draft' }
     setRowsPerQuery([[page], [{ ...page, status: 'published' }]])

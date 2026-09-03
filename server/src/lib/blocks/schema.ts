@@ -16,6 +16,24 @@ const safeHref = z.string().min(1).refine(
 // optional URL fields so clearing them doesn't fail validation on save.
 const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional())
 
+/**
+ * Exactly what POST /api/media/upload hands back. No other relative path
+ * qualifies. The route is matched case-sensitively by Express, so only the hex
+ * of the id is case-insensitive — `/API/MEDIA/<id>` would 404 on the guest page.
+ */
+const MANAGED_MEDIA_URL = /^\/api\/media\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+
+// An uploaded image is served from our own origin, so its URL is relative and
+// z.string().url() rejects it — which silently discarded every upload. Pasted
+// absolute URLs keep going through the exact same check as before.
+const externalUrl = z.string().url()
+const mediaUrl = z.string().refine(
+  (v) => MANAGED_MEDIA_URL.test(v) || externalUrl.safeParse(v).success,
+  { message: 'Envie uma imagem ou informe uma URL completa' },
+)
+
+const optionalMediaUrl = z.preprocess((v) => (v === '' ? undefined : v), mediaUrl.optional())
+
 export const headingBlock = z.object({ ...base, type: z.literal('heading'),
   props: z.object({ text: z.string(), level: z.union([z.literal(1), z.literal(2), z.literal(3)]) }) })
 
@@ -23,7 +41,7 @@ export const textBlock = z.object({ ...base, type: z.literal('text'),
   props: z.object({ text: z.string() }) }) // plain text, rendered whitespace-pre-wrap (no raw HTML — XSS-safe)
 
 export const imageBlock = z.object({ ...base, type: z.literal('image'),
-  props: z.object({ url: z.string().url(), alt: z.string().default(''), caption: z.string().optional() }) })
+  props: z.object({ url: mediaUrl, alt: z.string().default(''), caption: z.string().optional() }) })
 
 export const buttonBlock = z.object({ ...base, type: z.literal('button'),
   props: z.object({ label: z.string(), href: safeHref.or(z.literal('')), kind: z.enum(['link', 'tel', 'whatsapp', 'map']).default('link') }) })
@@ -53,7 +71,7 @@ export const emergencyBlock = z.object({ ...base, type: z.literal('emergency'),
   props: z.object({ contacts: z.array(z.object({ label: z.string(), phone: z.string() })).default([]) }) })
 
 export const heroBlock = z.object({ ...base, type: z.literal('hero'),
-  props: z.object({ imageUrl: optionalUrl, greeting: z.string(), propertyName: z.string() }) })
+  props: z.object({ imageUrl: optionalMediaUrl, greeting: z.string(), propertyName: z.string() }) })
 
 export const whatsappBlock = z.object({ ...base, type: z.literal('whatsapp'),
   props: z.object({ number: z.string(), message: z.string().optional() }) })
@@ -91,7 +109,7 @@ export const linkcardBlock = z.object({ ...base, type: z.literal('linkcard'),
 export const carouselBlock = z.object({ ...base, type: z.literal('carousel'),
   props: z.object({
     images: z.array(z.object({
-      url: optionalUrl,
+      url: optionalMediaUrl,
       alt: z.string().default(''),
       caption: z.string().optional(),
     })).default([]),
