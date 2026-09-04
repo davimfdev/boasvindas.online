@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { media, pages } from '../db/schema.js'
+import { media, pages, users } from '../db/schema.js'
 import { updateSchema } from './update-schema.js'
 import { generateSlug, isSlugReserved, isSlugValid } from '../utils/slug.js'
 import { isUniqueViolation } from '../middleware/error.js'
@@ -127,27 +127,44 @@ pagesRouter.put('/:id', async (req, res) => {
 })
 
 pagesRouter.delete('/:id', async (req, res) => {
-  const page = await getOwned(req.params.id, req.user!.id)
-  if (!page) {
+  const files = await db.transaction(async (tx) => {
+    // users -> pages -> media, the user row first and never after touching the
+    // others. Upload takes the same lock, so a media row inserted concurrently
+    // is either already visible to the read below or refused by the foreign key
+    // once this delete commits — it can no longer slip between the two.
+    await tx.select({ id: users.id }).from(users).where(eq(users.id, req.user!.id)).for('update')
+
+    const [page] = await tx
+      .select({ id: pages.id })
+      .from(pages)
+      .where(and(eq(pages.id, req.params.id), eq(pages.userId, req.user!.id)))
+      .limit(1)
+
+    if (!page) return null
+
+    // The rows go away with the page through the foreign key cascade, and that
+    // runs inside Postgres — so the filenames have to be read here, while the
+    // rows still exist. After the delete there is no way back to them.
+    const rows = await tx
+      .select({ filename: media.filename, variants: media.variants })
+      .from(media)
+      .where(eq(media.pageId, req.params.id))
+
+    await tx.delete(pages).where(eq(pages.id, req.params.id))
+
+    // Same shape as DELETE /api/media/:id: every width is a separate object, and
+    // filename repeats the widest variant, so the set collapses that duplicate.
+    return new Set(rows.flatMap((row) => [row.filename, ...(row.variants ?? []).map((v) => v.file)]))
+  })
+
+  if (!files) {
     res.status(404).json({ error: { code: 'NOT_FOUND' } })
     return
   }
 
-  // The rows go away with the page through the foreign key cascade, and that
-  // runs inside Postgres — so the filenames have to be read here, while the
-  // rows still exist. After the delete there is no way back to them.
-  const rows = await db
-    .select({ filename: media.filename, variants: media.variants })
-    .from(media)
-    .where(eq(media.pageId, req.params.id))
-
-  await db.delete(pages).where(eq(pages.id, req.params.id))
-
-  // Same shape as DELETE /api/media/:id: every width is a separate object, and
-  // filename repeats the widest variant, so the set collapses that duplicate.
-  const files = new Set(
-    rows.flatMap((row) => [row.filename, ...(row.variants ?? []).map((v) => v.file)]),
-  )
+  // Only after the commit: unlinking inside the transaction would leave rows
+  // pointing at files that no longer exist if it rolled back, and a broken
+  // image on a published page is worse than a file left on the volume.
   for (const file of files) await deleteMedia(file)
 
   res.status(204).end()
