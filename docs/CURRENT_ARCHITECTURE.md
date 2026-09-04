@@ -462,9 +462,44 @@ que reproduz exatamente esse comportamento.
 - Cliente: `src/lib/api.ts` — `credentials: 'include'`, `Content-Type: application/json`
   automático (omitido para `FormData`, cujo boundary o browser gera), `204` vira
   `undefined`, erro vira `ApiError { status, code, message }`.
-- **Exceção conhecida:** `src/features/builder/useAutosave.ts` usa `fetch` cru,
-  sem `credentials` e sem passar pelo cliente. Funciona porque a origem é a
-  mesma, mas ignora `VITE_API_BASE_URL` e não trata `401`.
+- **Todo caminho de rede do frontend passa pelo cliente**, incluindo o autosave
+  do construtor, que antes usava `fetch` cru e por isso descartava o status da
+  resposta.
+
+### Sessão expirada durante a edição
+
+O conteúdo do construtor vive só na memória do Zustand, então um `401` no
+autosave é risco de perda de trabalho, não um erro qualquer. O tratamento:
+
+- o `401` chega como `ApiError` e vira um estado **`expired`**, distinto do
+  `error` genérico de 500 ou de rede — este último continua sendo retentado na
+  edição seguinte, porque pode passar;
+- `expired` é **grudento**: `dirty` continua verdadeiro, nenhuma edição agenda
+  novo `PUT`, e a interface nunca volta a exibir "Salvando…";
+- um banner persistente avisa, e `beforeunload` liga o diálogo nativo do
+  navegador enquanto houver trabalho não salvo;
+- **"Revalidar sessão"** abre `/login?reauth=1` num popup. A aba do construtor
+  não navega nem recarrega, então nada em memória se perde. O modo reauth
+  autentica pelo mesmo cookie de sempre e devolve **apenas um sinal** por
+  `postMessage` de mesma origem — nenhum token trafega por mensagem, query
+  string, `localStorage` ou `sessionStorage`;
+- o construtor só aceita a mensagem com handle do popup presente, origem exata,
+  `event.source` igual à janela que ele abriu e tipo conferido. Aceita, retenta
+  o conteúdo atual; sucesso volta a salvo, novo `401` permanece `expired`;
+- popup fechado sem login preserva o estado e o trabalho; popup bloqueado mostra
+  aviso inline sem navegar;
+- **"Tentar salvar novamente"** segue como alternativa manual, e **não é
+  mecanismo de autenticação**: reenvia o conteúdo atual e só passa depois que o
+  cookie de sessão voltou a valer, seja pelo popup ou por outro login. Com a
+  sessão ainda inválida, recebe outro `401` e o estado continua `expired`.
+
+Validado em produção de ponta a ponta, incluindo o reload que confirmou a
+persistência da edição recuperada.
+
+**O que isto não resolve:** o trabalho não salvo continua só em memória, sem
+rascunho local; queda de navegador ou processo ainda perde; `beforeunload` é um
+pedido, não garantia; navegação interna do SPA com `dirty` ainda não foi
+avaliada; e não existe refresh token.
 
 ---
 
@@ -566,7 +601,7 @@ com SSR. Ver `ROADMAP.md`, Fase 3.
 
 ## 12. Testes
 
-**416 testes, todos passando** — 274 no frontend (42 arquivos) e 142 no backend
+**481 testes, todos passando** — 339 no frontend (44 arquivos) e 142 no backend
 (8 arquivos). Typecheck e build limpos nos dois pacotes.
 
 Nas rotas o Postgres é mockado. `http.test.ts` sobe o app Express de verdade com

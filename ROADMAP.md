@@ -125,7 +125,7 @@ Tudo abaixo roda em produção hoje.
 - [ ] SSR/SEO — **regressão consciente**, ver Fase 3 abaixo
 
 ### Testes automatizados
-- [x] **416 testes** no total: 274 no frontend (vitest, 42 arquivos) + 142 no
+- [x] **481 testes** no total: 339 no frontend (vitest, 44 arquivos) + 142 no
       backend (vitest + supertest, 8 arquivos). Confirmado rodando
       `npm test` na raiz e em `server/` em 2026-09-04, junto com typecheck e
       build limpos nos dois pacotes. Nas rotas o Postgres é mockado.
@@ -259,9 +259,15 @@ o disco pode crescer mesmo com todas as contas dentro do limite.
 - [ ] **Recuperação de senha** — quem esquece a senha perde a conta e todas as
       páginas publicadas. Bloqueante antes de cobrar assinatura
 - [ ] Editar o slug depois de criado
-- [ ] Tratar `401` no autosave: sessão expirada durante a edição hoje falha em
-      silêncio e o trabalho se perde (`src/features/builder/useAutosave.ts`,
-      que ainda usa `fetch` cru em vez do cliente `src/lib/api.ts`)
+- [x] ✅ **`401` no autosave tratado e validado em produção.** O autosave usa o
+      cliente `src/lib/api.ts`, distingue o `401` de falhas genéricas e entra num
+      estado `expired` grudento: mantém `dirty`, para de agendar `PUT` e não
+      finge estar salvando. O construtor mostra aviso persistente, protege
+      recarregamento com `beforeunload`, e **"Revalidar sessão"** abre
+      `/login?reauth=1` num popup que devolve um sinal `postMessage` de mesma
+      origem — sem token em mensagem, query ou storage — após o qual o conteúdo
+      em memória é retentado automaticamente. Riscos remanescentes em
+      [`PROJECT_STATE.md`](./PROJECT_STATE.md)
 
 ### Visibilidade
 - [ ] **Monitoramento de erros** (Sentry ou equivalente) na API e no frontend —

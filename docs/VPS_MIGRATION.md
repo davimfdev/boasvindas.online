@@ -819,7 +819,7 @@ O Vite faz proxy de `/api` para `http://localhost:3000`, então o cookie de sess
 
 ```bash
 npm run typecheck              # frontend
-npm test                       # frontend (vitest, 274 testes em 42 arquivos)
+npm test                       # frontend (vitest, 339 testes em 44 arquivos)
 npm run build                  # frontend -> /dist
 
 cd server
@@ -833,7 +833,7 @@ npm run build                  # backend -> server/dist
 TEST_DATABASE_URL=<url-de-teste> npm test    # 153 testes em 9 arquivos
 ```
 
-Contagens conferidas em 2026-09-04, commit `bc6e7c0`. Ao mudá-las, atualize
+Contagens conferidas em 2026-09-04, commit `e7983ba`. Ao mudá-las, atualize
 também `../PROJECT_STATE.md` e `../ROADMAP.md`.
 
 `server/src/routes/__tests__/http.test.ts` sobe o app Express de verdade com
@@ -928,7 +928,7 @@ deixadas como estão, para não misturar mudança de comportamento com migraçã
 | Imagens órfãs no volume | **parcialmente resolvido.** Apagar uma página agora remove os arquivos, e um upload que falha desfaz as próprias gravações. Continuam órfãos: os anteriores a essas correções, os deixados por uma queda entre o commit e a limpeza, e os de trocar a imagem no construtor — que segue sem chamar `DELETE /api/media/:id` | falta a rotina de faxina; a cota mede o que o banco conhece, não o volume |
 | ~~Sem cota nem rate limit no upload~~ | **Resolvido.** Rate limiting nas rotas sensíveis e cota de 200 MB por conta (`MEDIA_QUOTA_BYTES`), ambos validados em produção | — |
 | Suíte de integração precisa de banco próprio | os testes de cota e lock só rodam com `TEST_DATABASE_URL`; são pulados sem ela e **nunca caem para `DATABASE_URL`** | apontar para um Postgres descartável, jamais o de produção |
-| Autosave do construtor usa `fetch` cru | `src/features/builder/useAutosave.ts` chama `/api/pages/:id` direto, sem o cliente `src/lib/api.ts`. Funciona em produção (mesma origem, cookie first-party), mas ignora `VITE_API_BASE_URL` | migrar para `api.put` se algum dia a API for para outra origem |
+| ~~Autosave do construtor usa `fetch` cru~~ | **Resolvido.** Passou a usar `src/lib/api.ts`, então respeita `VITE_API_BASE_URL` e preserva o status da resposta — que é o que permitiu tratar o `401` de sessão expirada | — |
 | Imagens Docker não construídas aqui | a máquina de desenvolvimento não tem Docker | rodar `docker build` uma vez antes do primeiro deploy (comandos na seção 6) |
 | `npm audit` do backend: 4 moderadas | vêm do `drizzle-kit` (`esbuild` de desenvolvimento); corrigir exige downgrade quebrando o Drizzle | manter; não vai para a imagem de produção (`--omit=dev`) |
 | ~~Bundle único de ~1,3 MB~~ | **Resolvido.** Há code splitting por rota (`React.lazy` em `src/App.tsx`) e um chunk fixo para o vendor React. Maior chunk hoje: 189,6 kB (59,6 kB gzip) | — |

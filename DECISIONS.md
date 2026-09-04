@@ -156,6 +156,36 @@ motivo — não apague. Só entra aqui o que outra pessoa poderia desfazer sem s
   transação e sofrer rollback deixaria linhas apontando para o vazio: um arquivo
   sobrando é melhor que uma imagem quebrada em página publicada.
 
+## Sessão no construtor
+
+- **`401` no autosave é um estado próprio, não um erro genérico.** Um 500 ou uma
+  falha de rede pode passar na tecla seguinte; uma sessão expirada não passa até
+  alguém entrar de novo. Tratar os dois igual gastaria requisições condenadas e,
+  pior, continuaria exibindo "Salvando…" sobre trabalho que não está sendo salvo.
+- **O estado expirado é grudento e só sai por ação explícita.** Enquanto durar,
+  editar não agenda mais nada. É o que impede o construtor de mentir sobre o
+  próprio estado.
+- **Revalidar acontece num popup, nunca na aba do construtor.** O conteúdo não
+  salvo existe só na memória daquela aba, e **navegar, recarregar ou desmontar o
+  construtor destrói exatamente o que se quer proteger** — por isso não há
+  redirecionamento automático para o login.
+- **O aviso é um banner persistente, não um modal.** Um modal não destruiria o
+  estado em memória; a escolha é de uso: o banner mantém o editor utilizável
+  enquanto deixa a ação de recuperação explícita e permanente à vista, em vez de
+  interromper quem talvez só queira continuar escrevendo antes de revalidar.
+- **O `postMessage` do popup carrega só um sinal, jamais credencial.** Quem
+  autentica continua sendo o cookie httpOnly que o popup recebe e o abridor
+  compartilha por origem; a mensagem apenas diz "tente de novo agora". Nada de
+  token em mensagem, query string, `localStorage` ou `sessionStorage`.
+- **A mensagem só é aceita com o handle do popup em mãos.** Origem igual não
+  identifica quem falou: sem o handle da janela que o próprio construtor abriu,
+  qualquer página de mesma origem poderia disparar o retry. Reabrir o popup custa
+  um clique; afrouxar a checagem custaria a garantia.
+- **O aviso de saída é o do navegador, não um diálogo próprio.** `beforeunload`
+  com `preventDefault()` e `returnValue = ''` cobre os dois comportamentos de
+  motor. Uma confirmação desenhada por nós não seria acionada por recarregar nem
+  por fechar a aba, que são justamente os casos perigosos.
+
 ## Testes
 
 - **Os testes de integração nunca caem para `DATABASE_URL`.** Eles leem
