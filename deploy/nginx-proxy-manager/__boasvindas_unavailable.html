@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Instabilidade temporária — boasvindas.online</title>
+<!--
+  Página de indisponibilidade servida pelo proxy quando a aplicação não
+  responde (502/503/504).
+
+  Ela aparece exatamente quando a aplicação está fora do ar, então não pode
+  depender de nada que venha dela: sem JavaScript, sem CSS externo, sem fonte
+  remota, sem imagem, sem asset da aplicação. Tudo aqui é inline por
+  necessidade, não por descuido.
+
+  Nada de nome de servidor, endereço ou versão — nem no conteúdo, nem aqui:
+  este comentário também é servido ao navegador.
+
+  Fonte da verdade: deploy/nginx-proxy-manager/ neste repositório.
+  Instalação, validação e rollback: docs/VPS_MIGRATION.md, seção 7.
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    background: #fdfdfb;
+    color: #0a0a0a;
+    /* Pilha do sistema: a fonte do site vem do bundle, que pode não carregar. */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main { width: 100%; max-width: 26rem; text-align: center; }
+
+  .wordmark {
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .wordmark span { color: #0d9488; }
+
+  h1 {
+    margin: 1.75rem 0 0;
+    /* Acompanha a largura da tela sem media query. */
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  p {
+    margin: 0.875rem 0 0;
+    color: rgba(10, 10, 10, 0.6);
+  }
+
+  a {
+    display: inline-block;
+    margin-top: 2rem;
+    padding: 0.8rem 1.75rem;
+    border-radius: 9999px;
+    background: #0a0a0a;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  a:hover { background: #262626; }
+  a:focus-visible { outline: 2px solid #0d9488; outline-offset: 3px; }
+</style>
+</head>
+<body>
+  <main>
+    <p class="wordmark">boasvindas<span>.</span></p>
+    <h1>Estamos com uma instabilidade temporária</h1>
+    <p>O site volta em instantes. Nada do que você salvou foi perdido.</p>
+    <a href="/">Tentar novamente</a>
+  </main>
+</body>
+</html>
