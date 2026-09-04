@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactElement } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, Route, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
@@ -42,25 +42,32 @@ function withSuspense(element: ReactElement, fallback: ReactElement = <FullScree
   return <Suspense fallback={fallback}>{element}</Suspense>
 }
 
-export function App() {
-  return (
-    <Routes>
-      <Route path="/" element={withSuspense(<HomePage />)} />
+/**
+ * The route tree, as elements rather than a rendered `<Routes>`: main.tsx feeds
+ * it to `createRoutesFromElements` so the app runs on a data router. That is
+ * what makes `useBlocker` available to the builder — the declarative
+ * `<BrowserRouter>` does not provide the context it needs.
+ *
+ * The tree itself is unchanged: same paths, same nesting, same lazy chunks and
+ * fallbacks.
+ */
+export const appRoutes = (
+  <>
+    <Route path="/" element={withSuspense(<HomePage />)} />
 
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={withSuspense(<LoginPage />)} />
-        <Route path="/cadastro" element={withSuspense(<CadastroPage />)} />
+    <Route element={<AuthLayout />}>
+      <Route path="/login" element={withSuspense(<LoginPage />)} />
+      <Route path="/cadastro" element={withSuspense(<CadastroPage />)} />
+    </Route>
+
+    <Route element={<RequireAuth />}>
+      <Route element={<AppLayout />}>
+        <Route path="/app" element={withSuspense(<DashboardPage />)} />
+        <Route path="/app/:id/edit" element={withSuspense(<EditPage />)} />
       </Route>
+    </Route>
 
-      <Route element={<RequireAuth />}>
-        <Route element={<AppLayout />}>
-          <Route path="/app" element={withSuspense(<DashboardPage />)} />
-          <Route path="/app/:id/edit" element={withSuspense(<EditPage />)} />
-        </Route>
-      </Route>
-
-      <Route path="/:slug" element={withSuspense(<GuestPage />, <GuestPageLoader />)} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  )
-}
+    <Route path="/:slug" element={withSuspense(<GuestPage />, <GuestPageLoader />)} />
+    <Route path="*" element={<NotFoundPage />} />
+  </>
+)
