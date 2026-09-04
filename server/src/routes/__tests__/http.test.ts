@@ -17,10 +17,11 @@ const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock 
         ? Promise.reject(failure).then(resolve, reject)
         : Promise.resolve(nextRows()).then(resolve, reject),
   }
-  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set']) {
+  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'for']) {
     chain[method] = () => chain
   }
   const entry = () => chain
+  const dbEntry = { select: entry, insert: entry, update: entry, delete: entry }
 
   // Stands in for the `postgres` tagged-template client: readiness calls it as
   // `client\`select 1\``, so the mock must be callable, not just an object.
@@ -40,7 +41,12 @@ const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock 
     setFailure: (error: Error) => { failure = error },
     /** Controls what the tagged-template client mock does for `select 1`. */
     setDatabaseUp: (next: boolean) => { databaseUp = next },
-    dbMock: { select: entry, insert: entry, update: entry, delete: entry },
+    dbMock: {
+      select: entry, insert: entry, update: entry, delete: entry,
+      // The routes run inside a transaction; the queue is shared, so the
+      // callback simply receives the same chain the pool would hand out.
+      transaction: (fn: (tx: unknown) => Promise<unknown>) => fn(dbEntry),
+    },
     clientMock,
   }
 })
@@ -306,7 +312,7 @@ describe('pages (protected)', () => {
   })
 
   it('answers 204 when an owned page is deleted', async () => {
-    setRowsPerQuery([[{ id: 'page-1', slug: 'minha-suite', title: 'Minha Suíte' }], []])
+    setRowsPerQuery([[{ id: USER.id }], [{ id: 'page-1' }], [], []])
     const res = await request(app).delete('/api/pages/page-1').set('Cookie', await sessionCookie())
     expect(res.status).toBe(204)
   })

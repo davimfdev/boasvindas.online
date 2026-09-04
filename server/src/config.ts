@@ -50,4 +50,6 @@ export const config = {
   mediaDir: process.env.MEDIA_DIR ?? '/app/media',
   /** Largest upload accepted, in bytes. */
   mediaMaxBytes: Number(process.env.MEDIA_MAX_BYTES ?? 10 * 1024 * 1024),
+  /** Total stored image bytes one account may hold across all of its pages. */
+  mediaQuotaBytes: Number(process.env.MEDIA_QUOTA_BYTES ?? 200 * 1024 * 1024),
 } as const

@@ -13,10 +13,11 @@ const { setRows, setRowsPerQuery, setPasswordValid, verifyPasswordStub, dbMock, 
     then: (resolve: (value: unknown[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(nextRows()).then(resolve, reject),
   }
-  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'innerJoin']) {
+  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'innerJoin', 'for']) {
     chain[method] = () => chain
   }
   const entry = () => chain
+  const dbEntry = { select: entry, insert: entry, update: entry, delete: entry }
 
   let passwordValid = false
 
@@ -25,7 +26,12 @@ const { setRows, setRowsPerQuery, setPasswordValid, verifyPasswordStub, dbMock, 
     setRowsPerQuery: (next: unknown[][]) => { rows = []; queue = [...next] },
     setPasswordValid: (next: boolean) => { passwordValid = next },
     verifyPasswordStub: async () => passwordValid,
-    dbMock: { select: entry, insert: entry, update: entry, delete: entry },
+    dbMock: {
+      select: entry, insert: entry, update: entry, delete: entry,
+      // The routes run inside a transaction; the queue is shared, so the
+      // callback simply receives the same chain the pool would hand out.
+      transaction: (fn: (tx: unknown) => Promise<unknown>) => fn(dbEntry),
+    },
     clientMock: Object.assign(async () => [{ '?column?': 1 }], { end: async () => {} }),
   }
 })

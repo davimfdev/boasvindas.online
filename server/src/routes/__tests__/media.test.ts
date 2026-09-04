@@ -22,15 +22,21 @@ const { setRows, setRowsPerQuery, dbMock, clientMock } = vi.hoisted(() => {
         : Promise.resolve(next).then(resolve, reject)
     },
   }
-  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'innerJoin']) {
+  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'innerJoin', 'for']) {
     chain[method] = () => chain
   }
   const entry = () => chain
+  const dbEntry = { select: entry, insert: entry, update: entry, delete: entry }
 
   return {
     setRows: (next: unknown[]) => { rows = next; queue = [] },
     setRowsPerQuery: (next: (unknown[] | Error)[]) => { rows = []; queue = [...next] },
-    dbMock: { select: entry, insert: entry, update: entry, delete: entry },
+    dbMock: {
+      select: entry, insert: entry, update: entry, delete: entry,
+      // The routes run inside a transaction; the queue is shared, so the
+      // callback simply receives the same chain the pool would hand out.
+      transaction: (fn: (tx: unknown) => Promise<unknown>) => fn(dbEntry),
+    },
     clientMock: Object.assign(async () => [{ '?column?': 1 }], { end: async () => {} }),
   }
 })
@@ -68,11 +74,14 @@ vi.mock('../../services/media-storage.js', async (importOriginal) => {
 const MEDIA_DIR = mkdtempSync(path.join(os.tmpdir(), 'bv-media-'))
 process.env.MEDIA_DIR = MEDIA_DIR
 process.env.MEDIA_MAX_BYTES = '4096'
+// Small enough that a test can sit the account exactly on the ceiling.
+process.env.MEDIA_QUOTA_BYTES = String(1024 * 1024)
 
 const { createApp } = await import('../../app.js')
 const { saveMedia } = await import('../../services/media-storage.js')
 const { signSessionToken } = await import('../../services/session.js')
 const { config } = await import('../../config.js')
+const { processImage } = await import('../../services/image-pipeline.js')
 const { resetRateLimitersForTests } = await import('../../middleware/rate-limit.js')
 
 const app = createApp()
@@ -100,13 +109,25 @@ const STORED_NAME = /^[0-9a-f-]{36}\.webp$/
 /** Opaque bytes for the tests that exercise serving, not processing. */
 const STORED_BYTES = Buffer.from('bytes de um objeto ja armazenado')
 
+const QUOTA = config.mediaQuotaBytes
+
+/**
+ * Exactly what an upload of PHOTO will occupy: the sum of every variant the
+ * pipeline produces. Measured rather than hardcoded, so the quota cases stay
+ * exact if the encoder ever changes.
+ */
+const PHOTO_BYTES = (await processImage(PHOTO)).variants.reduce((total, v) => total + v.bytes.length, 0)
+
+/** One usage row worth exactly `bytes`, in the shape the usage query returns. */
+const usageOf = (bytes: number) => [{ sizeBytes: bytes, variants: null }]
+
 async function sessionCookie(): Promise<string> {
   return `${config.sessionCookieName}=${await signSessionToken(USER)}`
 }
 
-/** Queues the owned-page lookup and the insert ... returning the upload runs. */
-function ownedPageThenInsert() {
-  setRowsPerQuery([[{ id: PAGE_ID }], [{ id: MEDIA_ID }]])
+/** The four queries an upload runs: owned page, user lock, usage, insert. */
+function ownedPageThenInsert(usage: unknown[] = []) {
+  setRowsPerQuery([[{ id: PAGE_ID }], [{ id: USER.id }], usage, [{ id: MEDIA_ID }]])
 }
 
 beforeEach(async () => {
@@ -353,9 +374,9 @@ describe('DELETE /api/pages/:id removes the media files of the page', () => {
     }
   }
 
-  /** The three queries the route runs: owned page, its media rows, the delete. */
+  /** The four queries the route runs: user lock, owned page, media rows, delete. */
   function ownedPageWith(rows: unknown[]) {
-    setRowsPerQuery([[{ id: PAGE_ID, userId: USER.id }], rows, []])
+    setRowsPerQuery([[{ id: USER.id }], [{ id: PAGE_ID }], rows, []])
   }
 
   async function deletePage() {
@@ -460,7 +481,7 @@ describe('POST /api/media/upload takes back what it wrote when it fails', () => 
   })
 
   it('removes every file written when the insert fails', async () => {
-    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    setRowsPerQuery([[{ id: PAGE_ID }], [{ id: USER.id }], [], new Error('o insert falhou')])
     const before = readdirSync(MEDIA_DIR).length
     const logged = captureUnhandled()
     await uploadPhoto()
@@ -474,7 +495,7 @@ describe('POST /api/media/upload takes back what it wrote when it fails', () => 
       new Error('insert or update on table "media" violates foreign key constraint'),
       { code: '23503' },
     )
-    setRowsPerQuery([[{ id: PAGE_ID }], violation])
+    setRowsPerQuery([[{ id: PAGE_ID }], [{ id: USER.id }], [], violation])
     const before = readdirSync(MEDIA_DIR).length
     const logged = captureUnhandled()
     await uploadPhoto()
@@ -483,7 +504,7 @@ describe('POST /api/media/upload takes back what it wrote when it fails', () => 
   })
 
   it('answers 500 INTERNAL when the insert fails', async () => {
-    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    setRowsPerQuery([[{ id: PAGE_ID }], [{ id: USER.id }], [], new Error('o insert falhou')])
     const logged = captureUnhandled()
     const res = await uploadPhoto()
     logged.mockRestore()
@@ -492,7 +513,7 @@ describe('POST /api/media/upload takes back what it wrote when it fails', () => 
 
   // Cleaning up must not swallow or replace the failure the client is told about.
   it('hands the original failure to the error handler, not a cleanup failure', async () => {
-    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    setRowsPerQuery([[{ id: PAGE_ID }], [{ id: USER.id }], [], new Error('o insert falhou')])
     const logged = captureUnhandled()
     await uploadPhoto()
     const reported = logged.mock.calls[0]?.[1]
@@ -502,10 +523,106 @@ describe('POST /api/media/upload takes back what it wrote when it fails', () => 
 
   it('leaves a file stored by an earlier upload untouched', async () => {
     const earlier = await saveMedia(STORED_BYTES, 'webp')
-    setRowsPerQuery([[{ id: PAGE_ID }], new Error('o insert falhou')])
+    setRowsPerQuery([[{ id: PAGE_ID }], [{ id: USER.id }], [], new Error('o insert falhou')])
     const logged = captureUnhandled()
     await uploadPhoto()
     logged.mockRestore()
     expect(readdirSync(MEDIA_DIR)).toContain(earlier)
+  })
+})
+
+describe('POST /api/media/upload storage quota', () => {
+  async function uploadPhoto() {
+    return request(app)
+      .post('/api/media/upload')
+      .set('Cookie', await sessionCookie())
+      .field('pageId', PAGE_ID)
+      .attach('file', PHOTO, 'foto.png')
+  }
+
+  /** Owned page, user lock, the usage the query reports, then a failing insert. */
+  function usageThenInsertMustNotRun(usage: unknown[]) {
+    setRowsPerQuery([
+      [{ id: PAGE_ID }],
+      [{ id: USER.id }],
+      usage,
+      new Error('o insert nao deveria ter sido alcancado'),
+    ])
+  }
+
+  it('accepts an upload well below the quota', async () => {
+    ownedPageThenInsert(usageOf(1000))
+    const res = await uploadPhoto()
+    expect(res.status).toBe(201)
+  })
+
+  it('accepts an upload that lands exactly on the quota', async () => {
+    ownedPageThenInsert(usageOf(QUOTA - PHOTO_BYTES))
+    const res = await uploadPhoto()
+    expect(res.status).toBe(201)
+  })
+
+  it('answers 413 when the upload would exceed the quota by one byte', async () => {
+    ownedPageThenInsert(usageOf(QUOTA - PHOTO_BYTES + 1))
+    const res = await uploadPhoto()
+    expect(res.status).toBe(413)
+  })
+
+  it('returns the QUOTA_EXCEEDED envelope when the quota is passed', async () => {
+    ownedPageThenInsert(usageOf(QUOTA))
+    const res = await uploadPhoto()
+    expect(res.body).toEqual({
+      error: {
+        code: 'QUOTA_EXCEEDED',
+        message: 'Você atingiu o limite de armazenamento de imagens desta conta.',
+      },
+    })
+  })
+
+  // The oversized-file 413 must stay distinguishable from the quota 413.
+  it('keeps FILE_TOO_LARGE distinct from the quota refusal', async () => {
+    ownedPageThenInsert(usageOf(0))
+    const res = await request(app)
+      .post('/api/media/upload')
+      .set('Cookie', await sessionCookie())
+      .field('pageId', PAGE_ID)
+      .attach('file', Buffer.alloc(9000), 'grande.png')
+    expect(res.body.error.code).toBe('FILE_TOO_LARGE')
+  })
+
+  it('writes no file when the quota refuses the upload', async () => {
+    ownedPageThenInsert(usageOf(QUOTA))
+    const before = readdirSync(MEDIA_DIR).length
+    await uploadPhoto()
+    expect(readdirSync(MEDIA_DIR).length).toBe(before)
+  })
+
+  // Reaching the insert would surface the queued error as a 500 instead.
+  it('never reaches the insert when the quota refuses the upload', async () => {
+    usageThenInsertMustNotRun(usageOf(QUOTA))
+    const res = await uploadPhoto()
+    expect(res.status).toBe(413)
+  })
+
+  it('counts every variant of stored media, not just the widest', async () => {
+    const wouldFitOnWidestAlone = QUOTA - PHOTO_BYTES
+    ownedPageThenInsert([
+      { sizeBytes: wouldFitOnWidestAlone, variants: [
+        { width: 400, file: 'a.webp', sizeBytes: wouldFitOnWidestAlone },
+        { width: 800, file: 'b.webp', sizeBytes: 1 },
+      ] },
+    ])
+    const res = await uploadPhoto()
+    expect(res.status).toBe(413)
+  })
+
+  it('adds up media spread across several pages of the account', async () => {
+    const half = Math.ceil((QUOTA - PHOTO_BYTES + 2) / 2)
+    ownedPageThenInsert([
+      { sizeBytes: half, variants: null },
+      { sizeBytes: half, variants: null },
+    ])
+    const res = await uploadPhoto()
+    expect(res.status).toBe(413)
   })
 })

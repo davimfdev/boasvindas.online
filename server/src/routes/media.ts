@@ -4,10 +4,11 @@ import multer from 'multer'
 import { z } from 'zod'
 import { config } from '../config.js'
 import { db } from '../db/index.js'
-import { media, pages, type MediaVariant } from '../db/schema.js'
+import { media, pages, users, type MediaVariant } from '../db/schema.js'
 import { requireAuth } from '../middleware/require-auth.js'
 import { uploadLimiter } from '../middleware/rate-limit.js'
 import { deleteMedia, MediaNotFoundError, readMedia, saveMedia } from '../services/media-storage.js'
+import { QuotaExceededError, usedBytesForUser } from '../services/media-quota.js'
 import { processImage, type ProcessedImage } from '../services/image-pipeline.js'
 
 export const mediaRouter: Router = Router()
@@ -81,40 +82,65 @@ mediaRouter.post('/upload', requireAuth, uploadLimiter, receiveFile, async (req,
     return
   }
 
+  // What this upload will occupy: every width is stored, not just the widest.
+  const incomingBytes = processed.variants.reduce((total, v) => total + v.bytes.length, 0)
+
   const variants: MediaVariant[] = []
-  let widest: MediaVariant
-  let mediaId: string
+  let created: { id: string; widest: MediaVariant }
 
   // From the first write until the row exists, the objects on disk are known to
   // nobody: no row points at them and the client has no id. Anything that fails
   // in between has to take them back, or they stay forever.
   try {
-    for (const variant of processed.variants) {
-      variants.push({
-        width: variant.width,
-        file: await saveMedia(variant.bytes, 'webp'),
-        sizeBytes: variant.bytes.length,
-      })
-    }
+    created = await db.transaction(async (tx) => {
+      // users -> pages -> media, and the user row is the only lock taken
+      // explicitly. Page deletion takes the same one first, so an upload and a
+      // delete of the same account cannot interleave, and two uploads cannot
+      // both read the usage below the quota and then both write.
+      await tx.select({ id: users.id }).from(users).where(eq(users.id, req.user!.id)).for('update')
 
-    widest = variants[variants.length - 1]
-    const [row] = await db
-      .insert(media)
-      .values({
-        pageId,
-        filename: widest.file,
-        mimeType: SERVED_MIME_TYPE,
-        sizeBytes: widest.sizeBytes,
-        width: processed.width,
-        height: processed.height,
-        variants,
-      })
-      .returning({ id: media.id })
-    mediaId = row.id
+      const used = await usedBytesForUser(tx, req.user!.id)
+      if (used + incomingBytes > config.mediaQuotaBytes) throw new QuotaExceededError()
+
+      for (const variant of processed.variants) {
+        variants.push({
+          width: variant.width,
+          file: await saveMedia(variant.bytes, 'webp'),
+          sizeBytes: variant.bytes.length,
+        })
+      }
+
+      const widest = variants[variants.length - 1]
+      const [row] = await tx
+        .insert(media)
+        .values({
+          pageId,
+          filename: widest.file,
+          mimeType: SERVED_MIME_TYPE,
+          sizeBytes: widest.sizeBytes,
+          width: processed.width,
+          height: processed.height,
+          variants,
+        })
+        .returning({ id: media.id })
+
+      return { id: row.id, widest }
+    })
   } catch (err) {
     // deleteMedia never throws, so the failure the client is told about stays
-    // the one that actually happened rather than a failure to clean up.
+    // the one that actually happened rather than a failure to clean up. Over
+    // the quota there is nothing to undo: the check runs before the first write.
     for (const variant of variants) await deleteMedia(variant.file)
+
+    if (err instanceof QuotaExceededError) {
+      res.status(413).json({
+        error: {
+          code: 'QUOTA_EXCEEDED',
+          message: 'Você atingiu o limite de armazenamento de imagens desta conta.',
+        },
+      })
+      return
+    }
     throw err
   }
 
@@ -122,10 +148,10 @@ mediaRouter.post('/upload', requireAuth, uploadLimiter, receiveFile, async (req,
   // delete them.
   res.status(201).json({
     media: {
-      id: mediaId,
-      url: `/api/media/${mediaId}`,
+      id: created.id,
+      url: `/api/media/${created.id}`,
       mimeType: SERVED_MIME_TYPE,
-      sizeBytes: widest.sizeBytes,
+      sizeBytes: created.widest.sizeBytes,
       width: processed.width,
       height: processed.height,
       widths: variants.map((v) => v.width),
