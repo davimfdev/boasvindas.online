@@ -11,7 +11,7 @@
 
 ## Status
 
-Produção está no commit **`bc6e7c0`**, frontend e backend.
+Produção está no commit **`e7983ba`**, frontend e backend.
 
 | Camada | Status | Observação |
 |---|---|---|
@@ -22,7 +22,8 @@ Produção está no commit **`bc6e7c0`**, frontend e backend.
 | Nginx Proxy Manager | 🟢 OK | `/api/` com resolução dinâmica de DNS — sobrevive a rolling deploy |
 | Volume de mídia (`/app/media`) | 🟢 OK | named volume, persistiu à recriação do container |
 | Upload de imagens | 🟢 OK | upload → autosave → reload mantém a imagem |
-| Testes | 🟢 416 passando | 274 frontend + 142 backend; mais 11 de integração que só rodam com `TEST_DATABASE_URL` |
+| Testes | 🟢 481 passando | 339 frontend + 142 backend; mais 11 de integração que só rodam com `TEST_DATABASE_URL` |
+| Recuperação de sessão no construtor | 🟢 OK | 401 no autosave avisa, para de tentar e oferece revalidar por popup |
 | Typecheck / build | 🟢 limpos | nos dois pacotes |
 | Rate limiting | 🟢 OK | login, cadastro e upload — BLK-3A |
 | Cota de armazenamento | 🟢 OK | 200 MB por conta — BLK-3B |
@@ -33,7 +34,48 @@ Produção está no commit **`bc6e7c0`**, frontend e backend.
 
 ## Última tarefa concluída
 
-**BLK-3A e BLK-3B fechados e validados em produção** (2026-09-04).
+**Recuperação de sessão expirada no construtor, validada em produção**
+(2026-09-04).
+
+O autosave passou a usar o cliente `src/lib/api.ts` no lugar do `fetch` cru,
+então o `ApiError` chega inteiro e o `401` fica distinguível de uma falha
+qualquer. Um `401` leva a um estado `expired` **grudento**: `dirty` continua
+verdadeiro, nenhuma edição agenda novo `PUT`, e a interface para de dizer
+"Salvando…" sobre um trabalho que não está sendo salvo. As edições continuam em
+memória. Falhas genéricas de 500 ou de rede seguem em `error`, retentáveis na
+edição seguinte, porque podem passar.
+
+Recuperação sem sair da aba:
+
+- banner persistente avisando que a sessão expirou e que as alterações não foram
+  salvas;
+- `beforeunload` enquanto houver trabalho não salvo, com `preventDefault()` e
+  `returnValue = ''`, para o aviso nativo do navegador;
+- **"Revalidar sessão"** abre `/login?reauth=1` num popup pequeno. A aba do
+  construtor nunca é recarregada nem redirecionada;
+- o login em modo reauth usa o mesmo cookie de sessão de sempre e, ao concluir,
+  envia **apenas um sinal** por `postMessage` de mesma origem — nenhum token ou
+  credencial trafega por mensagem, query string, `localStorage` ou
+  `sessionStorage`;
+- o construtor só aceita a mensagem quando existe o handle do popup, a origem é
+  exatamente a dele, o `event.source` é a janela que ele mesmo abriu e o tipo
+  confere;
+- o popup fecha sozinho, e o construtor **retenta automaticamente o conteúdo
+  atual em memória**;
+- retry bem-sucedido volta ao estado salvo; outro `401` permanece `expired`;
+  fechar o popup sem entrar preserva o estado e o trabalho;
+- popup bloqueado pelo navegador mostra aviso inline, sem navegar;
+- **"Tentar salvar novamente"** continua disponível como alternativa manual.
+
+### Evidência da validação
+
+Fluxo completo exercitado em produção, nesta ordem: o construtor salvou
+normalmente; a sessão foi invalidada em outra aba; a edição seguinte disparou o
+aviso de expiração; o popup de revalidação abriu; o login foi concluído; o popup
+fechou sozinho; o construtor retentou automaticamente; o status voltou para
+salvo; e **um reload confirmou que a edição antes não salva persistiu**.
+
+### Entrega anterior (BLK-3A e BLK-3B, 2026-09-04)
 
 - `0bacfda` — **BLK-3A, rate limiting.** Quatro limiters, cada um montado na sua
   rota: login por IP + e-mail normalizado (10 / 15 min), login por IP
@@ -110,6 +152,28 @@ Nenhum. BLK-1, BLK-2, BLK-3A e BLK-3B estão fechados e validados em produção.
 
 ---
 
+## Riscos conhecidos do trabalho não salvo
+
+A recuperação acima reduz muito a chance de perda, mas **não a elimina**:
+
+- **O trabalho não salvo continua existindo só em memória.** Não há persistência
+  local de rascunho.
+- **Queda do navegador, do processo, falta de energia ou encerramento forçado**
+  ainda perdem tudo desde o último salvamento.
+- **`beforeunload` é um pedido, não uma garantia.** Quem ignorar o diálogo do
+  navegador perde o mesmo.
+- **Navegação interna do SPA com `dirty = true` ainda não foi avaliada.** O
+  `beforeunload` só cobre recarregar, fechar a aba e sair do site; sair do
+  construtor por um link interno é um caminho que ninguém verificou.
+- **Não existe refresh token.** Restaurar a autenticação exige entrar de novo —
+  pelo popup de revalidação ou por outro login válido. **"Tentar salvar
+  novamente" não reautentica**: ela apenas reenvia o conteúdo atual, e só tem
+  como dar certo depois que o cookie de sessão voltou a valer. Enquanto a sessão
+  seguir inválida, cada tentativa recebe outro `401` e o construtor permanece
+  `expired`.
+
+---
+
 ## Riscos conhecidos de mídia
 
 Não fazem parte do BLK-3, que fechou. É o que sobra do ciclo de vida da mídia, e
@@ -135,10 +199,10 @@ Detalhe em [`ROADMAP.md`](./ROADMAP.md), seção "Fechar o ciclo de vida da míd
 
 ## Último commit validado
 
-**`bc6e7c0`** — `feat: foto do hero da home sorteada a cada carregamento`
+**`e7983ba`** — `feat: revalida a sessão expirada por popup, sem sair do construtor`
 
 ```
-npm test          ->  274 testes, 42 arquivos   OK   (frontend)
+npm test          ->  339 testes, 44 arquivos   OK   (frontend)
 npm run typecheck ->  OK
 npm run build     ->  OK
 
