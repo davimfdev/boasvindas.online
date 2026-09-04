@@ -125,11 +125,17 @@ Tudo abaixo roda em produção hoje.
 - [ ] SSR/SEO — **regressão consciente**, ver Fase 3 abaixo
 
 ### Testes automatizados
-- [x] **354 testes** no total: 265 no frontend (vitest, 41 arquivos) + 89 no
-      backend (vitest + supertest, 6 arquivos). Confirmado rodando
-      `npm test` na raiz e em `server/` em 2026-09-03, junto com typecheck e
-      build limpos nos dois pacotes. Nenhum teste abre conexão real com banco;
-      o Postgres é mockado em `server/src/routes/__tests__/`.
+- [x] **416 testes** no total: 274 no frontend (vitest, 42 arquivos) + 142 no
+      backend (vitest + supertest, 8 arquivos). Confirmado rodando
+      `npm test` na raiz e em `server/` em 2026-09-04, junto com typecheck e
+      build limpos nos dois pacotes. Nas rotas o Postgres é mockado.
+- [x] **11 testes de integração contra PostgreSQL real**
+      (`server/src/db/__tests__/quota-lock.integration.test.ts`), cobrindo o que
+      um banco mockado não julga: o escopo por usuário da consulta de uso e o
+      comportamento do `FOR UPDATE`. Rodam **só** com `TEST_DATABASE_URL`
+      definida, são **pulados** quando ela falta e **nunca caem para
+      `DATABASE_URL`** — escrevem e apagam linhas, e não podem alcançar o banco
+      de produção. Com ela definida: 153 testes no backend.
 - [x] `PUT /api/pages/:id` com conteúdo que referencia uma imagem enviada está
       coberto — era o buraco por onde passou o bug do upload.
 - [ ] Nada verifica que as duas cópias de `blocks/schema.ts` (frontend e
@@ -155,10 +161,16 @@ Tudo abaixo roda em produção hoje.
       redeploy, graças ao volume persistente. Fluxo validado em produção
 - [ ] Upload no `hero.imageUrl` — o campo é `kind: 'text'` em `fields.ts`, então
       a imagem de capa (a mais visível da página) ainda exige colar URL externa
-- [ ] Remoção de mídia órfã: `DELETE /api/media/:id` existe e é testado, mas
-      **nenhuma linha do frontend o chama**; apagar a página remove as linhas
-      por cascade e deixa os arquivos. O disco cresce de forma monotônica
-- [ ] Cota de armazenamento por página, usuário ou plano
+- [x] ✅ **Apagar uma página remove os arquivos das mídias dela** (`0995878`),
+      depois do `DELETE` no banco; linhas legadas sem `variants` incluídas
+- [x] ✅ **Um upload que falha desfaz as próprias gravações** (`5b20a7c`):
+      falha de variante, de `INSERT` ou de foreign key limpa o que já escreveu, e
+      `saveMedia` remove o arquivo truncado quando o `writeFile` quebra
+- [x] ✅ **Cota de 200 MB por usuário** (`ea4e7e3`), configurável em
+      `MEDIA_QUOTA_BYTES`, sem lógica por plano
+- [ ] `DELETE /api/media/:id` continua **sem nenhum chamador no frontend**:
+      trocar ou limpar a imagem no construtor deixa a anterior no disco
+- [ ] Faxina de órfãos — ver "Fechar o ciclo de vida da mídia"
 
 ### Não entregue (confirmado por ausência no código)
 - [ ] **Analytics** — nenhuma dependência (Sentry, PostHog, Plausible) e
@@ -195,15 +207,44 @@ Estado detalhado e IDs dos bloqueadores em [`PROJECT_STATE.md`](./PROJECT_STATE.
 - [x] ✅ **BLK-2 — Volume `/app/media` confirmado.** É um named volume do
       Docker; uma mídia continuou devolvendo 200 depois de um redeploy que
       recriou o container da API
-- [ ] 🔴 **BLK-3 — Rate limiting** em `login`, `register` e `upload`, mais cota
-      de armazenamento por usuário. **É o próximo item técnico.** Deixou de ser
-      risco teórico agora que o upload funciona em produção
+- [x] ✅ **BLK-3A — Rate limiting** (`0bacfda`). Quatro limiters, cada um na sua
+      rota, com `MemoryStore` e uma única instância de API: login por IP +
+      e-mail normalizado (10 / 15 min), login por IP (50 / 15 min, só falhas
+      gastam o orçamento), cadastro por IP (10 / hora), upload por usuário
+      (30 / 10 min). Validado em produção: as 10 primeiras tentativas inválidas
+      devolveram `401` e a 11ª devolveu `429 RATE_LIMITED` com `Retry-After`
+- [x] ✅ **BLK-3B — Cota de armazenamento** (`ea4e7e3`). 200 MB por conta via
+      `MEDIA_QUOTA_BYTES`, sem lógica por plano. O uso soma os bytes de todas as
+      variantes, com fallback para `sizeBytes` nas linhas legadas, e conta
+      páginas em rascunho e publicadas. Um `FOR UPDATE` na linha do usuário
+      serializa uploads concorrentes; a exclusão de página usa o mesmo
+      protocolo, na ordem `users -> pages -> media`. Acima do limite a API
+      devolve `413 QUOTA_EXCEEDED`. Validado em produção: `/api/health/ready`
+      em `200` com `database: ok`, e o upload pelo construtor seguiu salvando e
+      sobrevivendo ao reload
+
+**Nenhum bloqueador ativo.** A próxima prioridade está em aberto — ver
+[`PROJECT_STATE.md`](./PROJECT_STATE.md).
 
 ### Fechar o ciclo de vida da mídia
-- [ ] Chamar `DELETE /api/media/:id` no construtor ao trocar ou limpar a imagem
+
+Riscos que **sobraram** depois do BLK-3 e que não fazem parte dele:
+
+- [ ] **Órfãos anteriores** às correções de `0995878` e `5b20a7c` podem seguir no
+      volume: nada os removeu retroativamente
+- [ ] **Queda entre o commit no banco e a limpeza no disco** ainda deixa
+      arquivos órfãos. O `unlink` acontece depois do commit de propósito — um
+      arquivo sobrando é melhor que uma imagem quebrada em página publicada —
+      mas a janela existe
+- [ ] Chamar `DELETE /api/media/:id` no construtor ao trocar ou limpar a imagem;
+      hoje nenhuma linha do frontend o chama
 - [ ] Rotina de faxina de órfãos (arquivos sem linha correspondente em `media`)
 - [ ] Upload no `hero.imageUrl` (trocar `kind: 'text'` por `'image'` em
       `fields.ts`)
+
+Enquanto isso, **a cota mede os bytes que o banco conhece, não o volume**. Ela
+serve hoje para conter abuso de armazenamento e **não é mecanismo de cobrança**:
+o disco pode crescer mesmo com todas as contas dentro do limite.
 
 ### Remover a causa-raiz estrutural
 - [ ] **Eliminar a duplicação de `blocks/schema.ts` e `templates.ts`** entre
@@ -426,8 +467,8 @@ dashboard.
 
 - [ ] Testes de carga na API Express (k6)
 - [ ] Lighthouse score ≥ 90 em todas as páginas públicas
-- [x] ~~Rate limiting nas rotas de API~~ → **movido para "Agora"** (BLK-3): é
-      risco de disponibilidade hoje, não item de pré-lançamento
+- [x] ~~Rate limiting nas rotas de API~~ → **entregue** em `0bacfda` (BLK-3A),
+      validado em produção. Ver "Agora".
 - [x] ~~Monitoramento de erros~~ → **movido para "Agora"**
 - [ ] Revisão de segurança formal (OWASP top 10, headers HTTP, CSP afinada).
       Já existe: `helmet`, CORS restrito, cookie httpOnly/Secure/SameSite=Lax,
@@ -460,8 +501,10 @@ Estado atual (fundação, auth, CRUD, builder, temas, publicação — entregue)
               └─► Fase 6 (lançamento)
 ```
 
-**"Agora" vem antes de tudo** — não é uma fase paralela. O upload está quebrado
-em produção, o volume de mídia não foi confirmado, e não existe rate limiting.
+**"Agora" vem antes de tudo** — não é uma fase paralela. O que a motivava já
+caiu: o upload funciona em produção, o volume de mídia está confirmado, e rate
+limiting e cota estão entregues. O que resta ali é a faxina de órfãos, a
+visibilidade (erros e CI) e os buracos de produto.
 
 Depois disso, Fases 1b, 2 e 3 não têm dependência forte entre si e podem
 avançar em paralelo. Fase 4 depende parcialmente da Fase 2 (não prometer preço

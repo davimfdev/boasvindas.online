@@ -643,16 +643,21 @@ O Vite faz proxy de `/api` para `http://localhost:3000`, então o cookie de sess
 
 ```bash
 npm run typecheck              # frontend
-npm test                       # frontend (vitest, 265 testes em 41 arquivos)
+npm test                       # frontend (vitest, 274 testes em 42 arquivos)
 npm run build                  # frontend -> /dist
 
 cd server
 npm run typecheck              # backend
-npm test                       # backend (vitest, 89 testes em 6 arquivos)
+npm test                       # backend (vitest, 142 testes em 8 arquivos,
+                               #          + 11 pulados sem TEST_DATABASE_URL)
 npm run build                  # backend -> server/dist
+
+# Opcional: a suíte de integração, contra um Postgres DESCARTÁVEL.
+# Nunca aponte para o banco de produção.
+TEST_DATABASE_URL=<url-de-teste> npm test    # 153 testes em 9 arquivos
 ```
 
-Contagens conferidas em 2026-09-02, commit `6b357d7`. Ao mudá-las, atualize
+Contagens conferidas em 2026-09-04, commit `bc6e7c0`. Ao mudá-las, atualize
 também `../PROJECT_STATE.md` e `../ROADMAP.md`.
 
 `server/src/routes/__tests__/http.test.ts` sobe o app Express de verdade com
@@ -738,13 +743,15 @@ Coisas encontradas na auditoria que **não** bloqueiam o deploy e que foram
 deixadas como estão, para não misturar mudança de comportamento com migração.
 
 > **Bloqueadores ativos ficam em [`../PROJECT_STATE.md`](../PROJECT_STATE.md)**,
-> não aqui. Hoje resta um: não há rate limiting nem cota de upload (BLK-3).
+> não aqui. Hoje não resta nenhum: BLK-3A (rate limiting) e BLK-3B (cota de
+> 200 MB por conta) foram entregues e validados em produção.
 
 | Item | Situação | Ação sugerida |
 |---|---|---|
 | `.env.example` cita `boasvindas-db` e não tem `MEDIA_DIR`/`MEDIA_MAX_BYTES` | regra local `deny: Write(**/.env.*)` impede a edição automática | trocar `@boasvindas-db:5432` por `@app-postgres:5432` e acrescentar as duas variáveis de mídia da seção 5 |
-| Imagens órfãs no volume | apagar uma página remove as linhas de `media` por cascade, mas não os arquivos; limpar a URL no construtor também não chama `DELETE /api/media/:id` | o disco cresce de forma monotônica; criar uma rotina de limpeza antes que isso importe. Passou a valer de verdade agora que o upload funciona em produção |
-| Sem cota nem rate limit no upload | qualquer anfitrião autenticado pode encher o volume 10 MB por vez | avaliar limite por página/usuário junto com a monetização |
+| Imagens órfãs no volume | **parcialmente resolvido.** Apagar uma página agora remove os arquivos, e um upload que falha desfaz as próprias gravações. Continuam órfãos: os anteriores a essas correções, os deixados por uma queda entre o commit e a limpeza, e os de trocar a imagem no construtor — que segue sem chamar `DELETE /api/media/:id` | falta a rotina de faxina; a cota mede o que o banco conhece, não o volume |
+| ~~Sem cota nem rate limit no upload~~ | **Resolvido.** Rate limiting nas rotas sensíveis e cota de 200 MB por conta (`MEDIA_QUOTA_BYTES`), ambos validados em produção | — |
+| Suíte de integração precisa de banco próprio | os testes de cota e lock só rodam com `TEST_DATABASE_URL`; são pulados sem ela e **nunca caem para `DATABASE_URL`** | apontar para um Postgres descartável, jamais o de produção |
 | Autosave do construtor usa `fetch` cru | `src/features/builder/useAutosave.ts` chama `/api/pages/:id` direto, sem o cliente `src/lib/api.ts`. Funciona em produção (mesma origem, cookie first-party), mas ignora `VITE_API_BASE_URL` | migrar para `api.put` se algum dia a API for para outra origem |
 | Imagens Docker não construídas aqui | a máquina de desenvolvimento não tem Docker | rodar `docker build` uma vez antes do primeiro deploy (comandos na seção 6) |
 | `npm audit` do backend: 4 moderadas | vêm do `drizzle-kit` (`esbuild` de desenvolvimento); corrigir exige downgrade quebrando o Drizzle | manter; não vai para a imagem de produção (`--omit=dev`) |

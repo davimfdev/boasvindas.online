@@ -125,6 +125,46 @@ motivo — não apague. Só entra aqui o que outra pessoa poderia desfazer sem s
   (`/api/media/<uuid>`, casada por regex ancorada) além de URLs absolutas — mas
   não caminhos relativos em geral. Aceitar "qualquer caminho relativo" seria
   permissividade sem contrapartida.
+- **A cota conta os bytes de todas as variantes, nunca `media.sizeBytes`.** Essa
+  coluna registra só a variante mais larga, enquanto cada largura é um objeto
+  próprio no disco — usá-la subnotificaria o uso em 20 a 35%. Linhas legadas sem
+  `variants` caem em `sizeBytes`, que aí descreve de fato o arquivo único.
+- **A cota existe para conter abuso de armazenamento, não para cobrar.** Não há
+  billing nem plano implementado hoje; o que ela impede é uma conta encher o
+  volume sozinha. Uma monetização futura pode reaproveitar o mesmo modelo de
+  contabilidade, mas isso ainda não existe.
+- **A cota mede os bytes que o banco conhece, não o volume.** Arquivos órfãos não
+  são atribuíveis a uma conta, e o banco é a única fonte com que a API consegue
+  concordar consigo mesma. A contrapartida é explícita: o disco pode crescer
+  mesmo com todas as contas dentro do limite, até existir a faxina de órfãos.
+- **Cota única de 200 MB, sem lógica por plano.** A coluna `users.plan` existe e
+  segue sem uso: escalonar por plano é decisão de monetização, não de
+  infraestrutura, e antecipá-la só criaria código sem cliente.
+- **Upload e exclusão de página compartilham um lock por linha de usuário**
+  (`SELECT ... FOR UPDATE` em `users`, sempre a primeira instrução da transação).
+  Um único recurso resolve as duas corridas — uploads concorrentes estourando a
+  cota, e uma exclusão que lê a lista de arquivos antes de um `INSERT` que o
+  cascade vai destruir. A ordem global é **`users -> pages -> media`**: o lock de
+  usuário nunca é tomado depois de tocar as outras tabelas, e é isso que impede
+  ciclo. Verificado contra um PostgreSQL real, inclusive o deadlock que a ordem
+  inversa produz.
+- **O `sharp` fica fora da transação; as gravações de arquivo ficam dentro.**
+  Processar uma foto leva centenas de milissegundos e serializaria a conta
+  inteira; gravar três arquivos pequenos leva milissegundos, e mantê-los dentro
+  do lock evita gravar bytes que a cota vai recusar em seguida.
+- **O `unlink` acontece sempre depois do commit.** Apagar arquivo dentro da
+  transação e sofrer rollback deixaria linhas apontando para o vazio: um arquivo
+  sobrando é melhor que uma imagem quebrada em página publicada.
+
+## Testes
+
+- **Os testes de integração nunca caem para `DATABASE_URL`.** Eles leem
+  exclusivamente `TEST_DATABASE_URL` e são pulados quando ela falta. A suíte
+  escreve e apaga linhas; um fallback silencioso apontaria para o banco que a API
+  serve, e o custo de esquecer seria destrutivo.
+- **O que um banco mockado não pode julgar não é afirmado por ele.** Escopo de
+  consulta e comportamento de lock são propriedades do PostgreSQL, então são
+  verificados contra um PostgreSQL — o resto continua mockado, que é mais rápido.
 
 ## Conteúdo e temas
 

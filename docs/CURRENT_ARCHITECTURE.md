@@ -1,7 +1,7 @@
 # Arquitetura atual — boasvindas.online
 
 > **Esta é a fonte de verdade sobre o que existe hoje.** Verificada diretamente no
-> código em 2026-09-02, commit `6b357d7`.
+> código em 2026-09-04, commit `bc6e7c0`.
 >
 > `ARCHITECTURE.md` e `STACK.md` na raiz descrevem a arquitetura **anterior**
 > (Next.js + Netlify + Neon + Backblaze B2 + Turborepo). São documentos
@@ -201,6 +201,8 @@ healthRouter             ANTES de qualquer parsing ou auth
 express.json({1mb})      global — não há webhook assinado no projeto
 attachUser               popula req.user quando há cookie válido; nunca rejeita
 /api/auth  /api/media  /api/pages  /api/public
+                         rate limiters montados por rota, nunca globalmente —
+                         a página do hóspede e suas imagens seguem sem medição
 notFound -> errorHandler
 ```
 
@@ -212,8 +214,8 @@ Envelope de erro uniforme: `{"error":{"code":"...","message":"..."}}`.
 |---|---|---|---|
 | GET | `/health` · `/api/health` | — | `200 {status:"ok"}` |
 | GET | `/health/ready` · `/api/health/ready` | — | `200 {status,database:"ok"}` · `503 degraded` (executa `select 1` com timeout de 2s) |
-| POST | `/api/auth/register` | — | `201 {user}` · `400 VALIDATION` · `409 EMAIL_EXISTS` |
-| POST | `/api/auth/login` | — | `200 {user}` + cookie · `401 CREDENTIALS` |
+| POST | `/api/auth/register` | — | `201 {user}` · `400 VALIDATION` · `409 EMAIL_EXISTS` · `429 RATE_LIMITED` |
+| POST | `/api/auth/login` | — | `200 {user}` + cookie · `401 CREDENTIALS` · `429 RATE_LIMITED` |
 | POST | `/api/auth/logout` | — | `204` + cookie limpo |
 | GET | `/api/auth/session` | — | `200 {user}` ou `200 {user:null}` |
 | GET | `/api/pages` | sessão | `200 {pages}` · `401` |
@@ -223,7 +225,7 @@ Envelope de erro uniforme: `{"error":{"code":"...","message":"..."}}`.
 | DELETE | `/api/pages/:id` | sessão + dono | `204` · `404` — **sem UI no frontend** |
 | POST | `/api/pages/:id/publish` | sessão + dono | `200 {page}` (alterna draft/published) |
 | GET | `/api/public/pages/:slug` | — | `200 {page}` · `404` — nunca devolve `content` de rascunho |
-| POST | `/api/media/upload` | sessão + dono | `201 {media}` · `413 FILE_TOO_LARGE` · `415 UNSUPPORTED_MEDIA_TYPE` |
+| POST | `/api/media/upload` | sessão + dono | `201 {media}` · `413 FILE_TOO_LARGE` · `413 QUOTA_EXCEEDED` · `415 UNSUPPORTED_MEDIA_TYPE` · `429 RATE_LIMITED` |
 | GET | `/api/media/:id?w=400\|800\|1600` | — | bytes WebP, `Cache-Control: immutable` · `404` |
 | DELETE | `/api/media/:id` | sessão + dono | `204` · `404` — **nunca chamado pelo frontend** |
 
@@ -378,9 +380,44 @@ named volume do Docker e já foi verificado sobrevivendo à recriação do conta
 da API. Sem esse volume, cada redeploy apaga as fotos enquanto as linhas de
 `media` continuam apontando para arquivos que não existem mais.
 
-Duas lacunas conhecidas: o frontend nunca chama `DELETE /api/media/:id`, então
-trocar ou apagar uma imagem deixa os arquivos no disco; e não há cota de
-armazenamento (`ROADMAP.md`, seção "Agora").
+### Cota de armazenamento
+
+200 MB por conta, em `MEDIA_QUOTA_BYTES`. **Não há lógica por plano.** O uso é
+derivado das linhas de `media` alcançadas por `media -> pages -> user`, somando
+`variants[].sizeBytes` de cada linha, com fallback para `sizeBytes` nas linhas
+legadas sem `variants`. Somar `sizeBytes` seria errado: ele registra só a
+variante mais larga, e cada largura é um objeto próprio no disco. Rascunhos
+contam igual a publicadas. Acima do limite: `413 QUOTA_EXCEEDED`, antes de
+qualquer gravação.
+
+### Serialização
+
+Upload e exclusão de página rodam em transação e travam a **linha do usuário**
+com `FOR UPDATE` como primeira instrução. É o mesmo lock nos dois, o que
+serializa uploads concorrentes de uma conta e impede que uma exclusão de página
+leia a lista de arquivos antes de um `INSERT` que o cascade vai destruir em
+seguida. Ordem global: **`users -> pages -> media`** — o lock de usuário nunca é
+tomado depois de tocar `pages` ou `media`, e é isso que evita ciclo. O que é caro
+(multer, magic bytes, `sharp`) fica fora da transação.
+
+### Limpeza de arquivos
+
+- Apagar uma página remove os arquivos das mídias dela, **depois** do `DELETE` no
+  banco. O `unlink` fora da transação é deliberado: um rollback depois de apagar
+  arquivos deixaria linhas apontando para o vazio, e imagem quebrada é pior que
+  arquivo sobrando.
+- Um upload que falha desfaz as próprias gravações — falha de variante, de
+  `INSERT` ou de foreign key — sem mascarar o erro original, já que `deleteMedia`
+  não lança para nenhuma entrada.
+- `saveMedia` remove o próprio arquivo truncado quando o `writeFile` quebra: ele
+  cria o objeto antes de terminar de escrevê-lo, e o nome nunca é devolvido nesse
+  caminho, então nenhum chamador poderia removê-lo.
+
+**Lacunas que continuam abertas:** o frontend nunca chama `DELETE /api/media/:id`,
+então trocar uma imagem deixa a anterior no disco; órfãos anteriores a essas
+correções seguem no volume; e uma queda entre o commit e a limpeza ainda deixa
+arquivos para trás. Não há faxina de órfãos. Portanto **a cota mede os bytes que
+o banco conhece, não o volume** (`ROADMAP.md`, "Fechar o ciclo de vida da mídia").
 
 ---
 
@@ -409,7 +446,7 @@ POST /api/auth/logout -> clearCookie
 - Sessão **stateless**: não há tabela de sessões, logout só apaga o cookie e um
   token vazado vale até expirar. Trocar `AUTH_SECRET` invalida todas as sessões.
 - Não existe recuperação de senha nem verificação de e-mail.
-- Não existe rate limiting em nenhuma rota.
+- Rate limiting existe nas rotas sensíveis — ver seção 9.
 
 ---
 
@@ -484,6 +521,14 @@ O passo a passo completo, as variáveis de ambiente e o troubleshooting estão e
 - Upload: magic bytes + decodificação real, re-encode que destrói qualquer
   payload embutido, nome gerado pelo servidor, regex anti path traversal, EXIF
   e GPS descartados.
+- **Rate limiting** (`express-rate-limit`, `MemoryStore`, uma instância de API),
+  montado rota a rota e nunca globalmente: login por IP + e-mail normalizado
+  (10 / 15 min), login por IP (50 / 15 min, contra password spraying, só falhas
+  gastam o orçamento), cadastro por IP (10 / hora), upload por usuário
+  (30 / 10 min). Resposta `429 RATE_LIMITED` com `Retry-After`. A chave vem de
+  `req.ip`, confiável porque `trust proxy` é 1 e o NPM anexa o endereço real.
+- **Cota de armazenamento** de 200 MB por conta, com o lock por linha de usuário
+  que serializa uploads concorrentes — ver seção 5.
 - Banco sem porta pública, alcançável só pela rede Docker.
 - Nenhum segredo chega ao frontend: as únicas variáveis `VITE_*` são URLs.
 - Os `console.error` do servidor nunca vazam para o corpo da resposta (o
@@ -492,8 +537,7 @@ O passo a passo completo, as variáveis de ambiente e o troubleshooting estão e
 
 ## 10. Segurança — o que falta
 
-- **Rate limiting em qualquer rota** (login, register, upload).
-- **Cota de armazenamento** por página, usuário ou plano.
+- Faxina de órfãos no volume de mídia — ver seção 5.
 - Recuperação de senha e verificação de e-mail.
 - Revogação de sessão (JWT stateless de 30 dias).
 - Monitoramento de erros — nenhum Sentry ou equivalente.
@@ -522,13 +566,25 @@ com SSR. Ver `ROADMAP.md`, Fase 3.
 
 ## 12. Testes
 
-**354 testes, todos passando** — 265 no frontend (41 arquivos) e 89 no backend
-(6 arquivos). Typecheck e build limpos nos dois pacotes.
+**416 testes, todos passando** — 274 no frontend (42 arquivos) e 142 no backend
+(8 arquivos). Typecheck e build limpos nos dois pacotes.
 
-Nenhum teste abre conexão com banco: o Postgres é mockado em
-`server/src/routes/__tests__/`. `http.test.ts` sobe o app Express de verdade com
+Nas rotas o Postgres é mockado. `http.test.ts` sobe o app Express de verdade com
 `supertest`, e cobre `PUT /api/pages/:id` com conteúdo que referencia uma imagem
 enviada.
+
+Além desses, **11 testes de integração contra um PostgreSQL real** em
+`server/src/db/__tests__/quota-lock.integration.test.ts`, cobrindo o que um banco
+mockado não julga: se a consulta de uso realmente filtra por usuário e se o
+`FOR UPDATE` realmente serializa. Eles:
+
+- rodam **só** quando `TEST_DATABASE_URL` está definida;
+- são **pulados** quando ela falta, sem falhar a suíte;
+- **nunca caem para `DATABASE_URL`** — escrevem e apagam linhas, e não podem
+  alcançar o banco que a API serve;
+- montam o schema com as migrations já existentes.
+
+Com `TEST_DATABASE_URL` definida o backend soma 153 testes em 9 arquivos.
 
 Buracos relevantes:
 
