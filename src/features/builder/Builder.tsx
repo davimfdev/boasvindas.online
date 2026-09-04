@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ExternalLink, Palette as PaletteIcon, Sparkles } from 'lucide-react'
 import {
@@ -9,6 +9,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import type { BlockType, PageContent } from '@/lib/blocks/schema'
+import { isReauthSuccess, openReauthPopup } from '@/lib/reauth'
 import { createBuilderStore, useBuilder } from './store'
 import { useAutosave, type SaveStatus } from './useAutosave'
 import { Palette } from './Palette'
@@ -45,33 +46,47 @@ const STATUS_DOT: Record<SaveStatus, string> = {
 /**
  * Deliberately a banner and not a modal: the unsaved work only exists in this
  * tab's memory, so anything that blocks or navigates away destroys exactly what
- * it is meant to protect. Signing in happens in a second tab, which shares the
- * cookie, and the retry then saves from here.
+ * it is meant to protect. Signing in happens in a popup, which shares the cookie
+ * by origin and reports back, and the save is then retried from here.
  */
-function SessionExpiredBanner({ onRetry }: { onRetry: () => void }) {
+function SessionExpiredBanner({
+  onReauth,
+  onRetry,
+  popupBlocked,
+}: {
+  onReauth: () => void
+  onRetry: () => void
+  popupBlocked: boolean
+}) {
   return (
     <div
       role="alert"
       className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-900"
     >
       <AlertTriangle className="size-4 shrink-0 text-red-600" />
-      <p className="min-w-0 flex-1">
-        <strong className="font-semibold">Sua sessão expirou. As alterações atuais ainda não foram salvas.</strong>{' '}
-        Entre novamente em outra aba e depois tente salvar. Não feche nem recarregue esta aba: o
-        que você editou desde o último salvamento só existe aqui.
-      </p>
-      <a
-        href="/login"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300 transition-colors hover:bg-red-100"
+      <div className="min-w-0 flex-1">
+        <p>
+          <strong className="font-semibold">Sua sessão expirou. As alterações atuais ainda não foram salvas.</strong>{' '}
+          Revalide a sessão para continuar. Não feche nem recarregue esta aba: o que você editou
+          desde o último salvamento só existe aqui.
+        </p>
+        {popupBlocked && (
+          <p className="mt-1 font-medium">
+            Não foi possível abrir a janela de login. Permita pop-ups e tente novamente.
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onReauth}
+        className="rounded-full bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 active:scale-95"
       >
-        Entrar novamente
-      </a>
+        Revalidar sessão
+      </button>
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-full bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 active:scale-95"
+        className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300 transition-colors hover:bg-red-100"
       >
         Tentar salvar novamente
       </button>
@@ -88,6 +103,30 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
 
   const onSaved = useCallback(() => store.getState().markSaved(), [store])
   const { status, retry } = useAutosave(pageId, content, dirty, onSaved)
+
+  const reauthWindow = useRef<Window | null>(null)
+  const [popupBlocked, setPopupBlocked] = useState(false)
+
+  const openReauth = useCallback(() => {
+    const popup = openReauthPopup()
+    reauthWindow.current = popup
+    setPopupBlocked(!popup)
+  }, [])
+
+  // Only while expired: nothing else on the page has any business acting on
+  // this message. Closing the popup without signing in simply never posts one,
+  // so the builder stays expired with the work untouched.
+  useEffect(() => {
+    if (status !== 'expired') return
+    const onMessage = (event: MessageEvent) => {
+      if (!isReauthSuccess(event, reauthWindow.current)) return
+      reauthWindow.current = null
+      setPopupBlocked(false)
+      void retry()
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [status, retry])
 
   // The only thing standing between unsaved work and a reflex Ctrl+R. The
   // browser owns the dialog; nothing here may draw its own.
@@ -126,7 +165,9 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-muted/20">
-      {status === 'expired' && <SessionExpiredBanner onRetry={retry} />}
+      {status === 'expired' && (
+        <SessionExpiredBanner onReauth={openReauth} onRetry={retry} popupBlocked={popupBlocked} />
+      )}
 
       <header className="flex items-center justify-between gap-4 border-b border-border/70 bg-card/70 px-5 py-2.5 backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-2.5">
