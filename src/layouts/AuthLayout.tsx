@@ -1,6 +1,21 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useSearchParams } from 'react-router-dom'
+import { REAUTH_PARAM } from '@/lib/reauth'
 
 export function AuthLayout() {
+  const [params] = useSearchParams()
+
+  // The reauth popup is ~420px wide: the marketing column and the photo panel
+  // would leave no room for the form itself.
+  if (params.get(REAUTH_PARAM) === '1') {
+    return (
+      <div className="min-h-screen bg-[#fdfdfb] px-6 py-10 font-grotesk">
+        <div className="mx-auto w-full max-w-sm">
+          <Outlet />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid min-h-screen font-grotesk lg:grid-cols-2">
       <div className="flex flex-col justify-between bg-[#fdfdfb] px-6 py-10 sm:px-12 lg:px-20">

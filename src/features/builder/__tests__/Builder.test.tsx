@@ -99,24 +99,112 @@ describe('Builder session-expired banner', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('points the sign-in link at the login page', () => {
-    autosaveMock.status = 'expired'
-    renderBuilder()
-    expect(screen.getByRole('link', { name: 'Entrar novamente' })).toHaveAttribute('href', '/login')
-  })
-
-  // Signing in has to happen elsewhere: leaving this tab discards the edits.
-  it('opens the sign-in link in another tab', () => {
-    autosaveMock.status = 'expired'
-    renderBuilder()
-    expect(screen.getByRole('link', { name: 'Entrar novamente' })).toHaveAttribute('target', '_blank')
-  })
-
-  it('runs the retry when the button is pressed', () => {
+  it('runs the retry when the manual fallback is pressed', () => {
     autosaveMock.status = 'expired'
     renderBuilder()
     fireEvent.click(screen.getByRole('button', { name: 'Tentar salvar novamente' }))
     expect(retryMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Builder session revalidation popup', () => {
+  const ORIGIN = window.location.origin
+  const popup = { name: 'popup' } as unknown as Window
+
+  function expiredBuilder(opened: Window | null = popup) {
+    const open = vi.spyOn(window, 'open').mockReturnValue(opened)
+    autosaveMock.status = 'expired'
+    renderBuilder()
+    return open
+  }
+
+  function revalidate() {
+    fireEvent.click(screen.getByRole('button', { name: 'Revalidar sessão' }))
+  }
+
+  /**
+   * What the popup posts back. jsdom does not let a dispatched MessageEvent
+   * carry an origin or a source, so both are pinned onto the event directly.
+   */
+  function postToOpener(
+    overrides: { origin?: string; source?: Window; data?: unknown } = {},
+  ) {
+    const event = new MessageEvent('message', {
+      data: overrides.data ?? { type: 'boasvindas:reauth-success' },
+    })
+    Object.defineProperty(event, 'origin', { value: overrides.origin ?? ORIGIN })
+    Object.defineProperty(event, 'source', { value: overrides.source ?? popup })
+    act(() => { window.dispatchEvent(event) })
+  }
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it('opens the login page in reauth mode', () => {
+    const open = expiredBuilder()
+    revalidate()
+    expect(open.mock.calls[0][0]).toBe('/login?reauth=1')
+  })
+
+  // Navigating this tab would discard exactly the work being rescued.
+  it('never navigates the builder tab', () => {
+    expiredBuilder()
+    const before = window.location.href
+    revalidate()
+    expect(window.location.href).toBe(before)
+  })
+
+  it('saves again once the popup reports success', () => {
+    expiredBuilder()
+    revalidate()
+    postToOpener()
+    expect(retryMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a success claim from another origin', () => {
+    expiredBuilder()
+    revalidate()
+    postToOpener({ origin: 'https://evil.example' })
+    expect(retryMock).not.toHaveBeenCalled()
+  })
+
+  it('ignores a message of another type', () => {
+    expiredBuilder()
+    revalidate()
+    postToOpener({ data: { type: 'outra-coisa' } })
+    expect(retryMock).not.toHaveBeenCalled()
+  })
+
+  it('ignores a message from a window it did not open', () => {
+    expiredBuilder()
+    revalidate()
+    postToOpener({ source: { name: 'outra' } as unknown as Window })
+    expect(retryMock).not.toHaveBeenCalled()
+  })
+
+  // Closing the popup posts nothing, so nothing changes and the work is kept.
+  it('stays expired when the popup is closed without signing in', () => {
+    expiredBuilder()
+    revalidate()
+    expect(screen.getByRole('alert')).toHaveTextContent(SESSION_WARNING)
+  })
+
+  it('explains how to proceed when the popup is blocked', () => {
+    expiredBuilder(null)
+    revalidate()
+    expect(screen.getByRole('alert')).toHaveTextContent(/Permita pop-ups e tente novamente/)
+  })
+
+  it('keeps the builder in place when the popup is blocked', () => {
+    expiredBuilder(null)
+    const before = window.location.href
+    revalidate()
+    expect(window.location.href).toBe(before)
+  })
+
+  it('says nothing about pop-ups until one is actually blocked', () => {
+    expiredBuilder()
+    revalidate()
+    expect(screen.getByRole('alert')).not.toHaveTextContent(/Permita pop-ups/)
   })
 })
 
