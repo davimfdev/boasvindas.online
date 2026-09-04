@@ -140,6 +140,9 @@ pagesRouter.delete('/:id', async (req, res) => {
       .where(and(eq(pages.id, req.params.id), eq(pages.userId, req.user!.id)))
       .limit(1)
 
+    // Returning normally commits, so this leaves an empty transaction behind
+    // rather than a rollback. Nothing was written — only the lock was taken —
+    // so there is nothing to undo. See the integration suite.
     if (!page) return null
 
     // The rows go away with the page through the foreign key cascade, and that
