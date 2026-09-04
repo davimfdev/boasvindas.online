@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ArrowUpRight, MessageCircle, QrCode, Palette, KeyRound, MapPin } from 'lucide-react'
+import { pickHeroImage, rememberHeroImage } from '@/lib/hero-image'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
 
@@ -13,6 +14,10 @@ const REVEAL = 'Um guia digital completo para o seu hóspede — do Wi-Fi à dic
 
 export function HomePage() {
   const root = useRef<HTMLElement>(null)
+
+  // Drawn once per load, never after: the hero must not turn into a slideshow.
+  const [heroImage] = useState(pickHeroImage)
+  useEffect(() => { rememberHeroImage(heroImage) }, [heroImage])
 
   useGSAP(() => {
     gsap.from('[data-hero]', { y: 40, opacity: 0, duration: 1, ease: 'power3.out', stagger: 0.12 })
@@ -68,7 +73,7 @@ export function HomePage() {
       <section className="relative grain mesh-dark flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity contrast-125"
-          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1920&q=80)" }}
+          style={{ backgroundImage: `url(${heroImage})` }}
         />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.55)_75%)]" />
 
