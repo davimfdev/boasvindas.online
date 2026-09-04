@@ -467,6 +467,10 @@ location ^~ /api/ {
 }
 ```
 
+> Este trecho isola a resolução de DNS. O bloco *Advanced* completo que está em
+> produção, com as páginas de erro, é o da subseção "Páginas de erro geradas pelo
+> proxy" mais abaixo — reconstrua a partir dele, não daqui.
+
 - `127.0.0.11` é o DNS embutido do Docker. `valid=5s` define a validade do
   resultado no cache do resolver: a entrada é reaproveitada por até 5 segundos e
   depois reconsultada, então o proxy acompanha a troca de IP em poucos segundos
@@ -503,6 +507,178 @@ Pontos críticos:
   não se parece nada com o problema real.
 - Use os **network aliases**, nunca IPs de container.
 - O NPM precisa estar na mesma rede Docker (`boasvindas`) dos dois recursos.
+
+### Páginas de erro geradas pelo proxy
+
+Quando `boasvindas-site` ou `boasvindas-api` não respondem, o erro nasce **dentro
+do NPM** — nenhum container da aplicação chega a ser consultado, então nenhuma
+linha de React ou de Express pode tratá-lo. Sem configuração, o visitante vê a
+página padrão do openresty.
+
+O que está em produção, validado à mão:
+
+| Situação | Quem gera | Resposta |
+|---|---|---|
+| `/` com o site fora do ar (502/503/504) | NPM | HTML da marca |
+| `/api/` com a API fora do ar (502/503/504) | NPM | JSON `UPSTREAM_UNAVAILABLE`, **preservando o status original** |
+| `/api/` com corpo acima de 12 MB (413) | NPM | JSON `PAYLOAD_TOO_LARGE` |
+| 401/404/413/500 do Express | aplicação | **intocados**, envelope JSON de sempre |
+| `/api/health/ready` | aplicação | **intocado**, 200 JSON |
+| Rota desconhecida do SPA | React Router | **intocada**, `NotFoundPage` |
+
+Os dois arquivos servidos do disco são versionados em
+[`deploy/nginx-proxy-manager/`](../deploy/nginx-proxy-manager/):
+
+| Arquivo no repositório | Caminho interno | Arquivo em produção |
+|---|---|---|
+| `__boasvindas_unavailable.html` | `/__boasvindas_unavailable.html` | `/data/errors/__boasvindas_unavailable.html` |
+| `__boasvindas_api_unavailable.json` | `/__boasvindas_api_unavailable.json` | `/data/errors/__boasvindas_api_unavailable.json` |
+
+O 413 da API **não tem arquivo**: o corpo é devolvido inline por um `return` na
+própria configuração, e por isso não pode ficar dessincronizado de nada.
+
+Sobre o HTML: a página que está no ar foi validada à mão e **não se sabe se é
+byte a byte igual** à versionada aqui. Deste commit em diante o repositório é a
+cópia canônica e recuperável; produção deve ser sincronizada a partir dela na
+próxima janela segura, com o `docker cp` da subseção de reconstrução.
+
+#### Bloco *Advanced* do proxy host
+
+Reproduz o que está em produção. `boasvindas.online` e `www.boasvindas.online`,
+`/` para `boasvindas-site:80` e a Custom Location `/api/` para
+`boasvindas-api:3000`.
+
+```nginx
+resolver 127.0.0.11 valid=5s ipv6=off;
+set $api_backend boasvindas-api;
+
+# Falha de upstream do site: HTML da marca, servido do volume do proprio NPM.
+error_page 502 503 504 /__boasvindas_unavailable.html;
+
+location = /__boasvindas_unavailable.html {
+    internal;
+    root /data/errors;
+}
+
+location ^~ /api/ {
+    client_max_body_size 12m;
+
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # A API responde JSON; uma pagina HTML aqui quebraria o cliente.
+    error_page 502 503 504 /__boasvindas_api_unavailable.json;
+    error_page 413          /__boasvindas_api_payload_too_large.json;
+
+    proxy_pass http://$api_backend:3000;
+}
+
+# Arquivo em disco, no mesmo volume da pagina HTML. Sem codigo de status no
+# error_page acima, o status original do upstream e preservado: um 502 chega ao
+# cliente como 502, um 504 como 504.
+location = /__boasvindas_api_unavailable.json {
+    internal;
+    default_type application/json;
+    root /data/errors;
+}
+
+# Este e inline: o 413 nasce no proprio proxy, nao ha upstream envolvido.
+location = /__boasvindas_api_payload_too_large.json {
+    internal;
+    default_type application/json;
+    return 413 '{"error":{"code":"PAYLOAD_TOO_LARGE","message":"O arquivo enviado é maior que o limite permitido."}}';
+}
+```
+
+#### O que não fazer
+
+- **Não ligue `proxy_intercept_errors on`.** Ele faz o nginx capturar os erros
+  que o *upstream* devolveu, não só os que o proxy gerou. Ligado, o `401` de
+  sessão expirada, o `404` de página inexistente, o `413 FILE_TOO_LARGE` do
+  multer e o `500 INTERNAL` do Express virariam HTML — e o cliente em
+  `src/lib/api.ts`, que espera JSON, perderia o código do erro. A configuração
+  acima **depende** de ele continuar desligado: sem ele, `error_page` só atua
+  sobre o que o próprio nginx produziu.
+- **Não acrescente `401`, `404`, `500` ou outros 4xx/5xx da aplicação** às linhas
+  de `error_page`. Só `502 503 504` (upstream inalcançável) e `413` (recusado
+  pelo `client_max_body_size`, antes de chegar ao Express) são do proxy.
+- **Não coloque URI nem barra final no `proxy_pass` da API.** Tem de continuar
+  `http://$api_backend:3000` e nada mais — ver a subseção de DNS dinâmico acima.
+- **Não troque `$api_backend` pelo hostname literal**, ou o 502 pós-deploy volta.
+- **Não referencie asset da aplicação na página de erro.** Ela é servida quando a
+  aplicação está fora do ar; um `<script>`, um CSS de `/assets/` ou uma fonte
+  externa quebrariam exatamente na hora em que ela importa.
+- **Não use `internal` como opcional.** É o que impede acesso direto às três
+  locations de erro e loops de redirecionamento.
+- **Não force um status no `error_page` da API.** Sem código de status, o
+  original do upstream é preservado — um 502 chega ao cliente como 502. Escrever
+  `error_page 502 503 504 =503 ...` achataria tudo em 503 e apagaria a
+  diferença entre "fora do ar" e "tempo esgotado".
+
+#### Persistência e reconstrução da VPS
+
+`/data` é o volume persistente do NPM — o mesmo que guarda os certificados e o
+banco interno. Arquivos em `/data/errors/` e o conteúdo do campo *Advanced*
+**sobrevivem a restart, a `docker pull` da imagem do NPM e a redeploy da
+aplicação**. Nada disso é tocado por um deploy do site ou da API.
+
+O que **não** sobrevive é reconstruir a VPS do zero. Depois de subir um NPM novo:
+
+```bash
+# 1. Recriar o diretorio e copiar os dois arquivos versionados
+docker exec <npm> mkdir -p /data/errors
+docker cp deploy/nginx-proxy-manager/__boasvindas_unavailable.html \
+  <npm>:/data/errors/__boasvindas_unavailable.html
+docker cp deploy/nginx-proxy-manager/__boasvindas_api_unavailable.json \
+  <npm>:/data/errors/__boasvindas_api_unavailable.json
+
+# 2. Colar o bloco Advanced acima no proxy host e salvar
+```
+
+O 413 não entra aqui: sendo inline, ele viaja junto com o bloco *Advanced*.
+
+Ao editar qualquer um dos dois arquivos no repositório, o passo 1 é também o
+procedimento de atualização — o NPM serve o arquivo do disco, sem cache de
+conteúdo.
+
+#### Validação, sem derrubar nada
+
+Nenhum destes comandos exige simular uma queda:
+
+```bash
+# Configuracao valida (o NPM recarrega sozinho ao salvar; isto so confere)
+docker exec <npm> nginx -t
+
+# Os caminhos da aplicacao seguem intocados
+curl -i https://boasvindas.online/api/health/ready      # 200 JSON, database: ok
+curl -i https://boasvindas.online/api/nao-existe        # 404 JSON NOT_FOUND
+curl -i https://boasvindas.online/rota-que-nao-existe   # 200 + shell do SPA
+
+# As locations internas nao sao alcancaveis de fora
+curl -i https://boasvindas.online/__boasvindas_unavailable.html              # 404
+curl -i https://boasvindas.online/__boasvindas_api_unavailable.json          # 404
+curl -i https://boasvindas.online/__boasvindas_api_payload_too_large.json    # 404
+
+# Os dois arquivos estao onde a configuracao espera
+docker exec <npm> ls -l /data/errors/
+```
+
+As três primeiras são as que importam de verdade: elas provam que a
+interceptação **não** vazou para respostas da aplicação. Se alguma delas mudar
+de comportamento, o `error_page` foi longe demais.
+
+Para exercitar a página de 502 sem afetar o domínio de produção, crie um proxy
+host temporário num subdomínio de teste apontando para um upstream inexistente,
+com o mesmo bloco *Advanced*.
+
+#### Rollback
+
+Esvazie o campo *Advanced* do proxy host e salve. O NPM regenera a configuração
+e recarrega em segundos; volta-se à página padrão do openresty, sem redeploy de
+container e sem tocar na aplicação. O arquivo em `/data/errors/` pode ficar onde
+está — sem o `error_page` ele deixa de ser referenciado.
 
 ---
 
