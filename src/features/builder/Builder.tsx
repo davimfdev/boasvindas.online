@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink, Palette as PaletteIcon, Sparkles } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Palette as PaletteIcon, Sparkles } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -31,6 +31,7 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   saving: 'Salvando…',
   saved: 'Salvo',
   error: 'Erro ao salvar',
+  expired: 'Não salvo',
 }
 
 const STATUS_DOT: Record<SaveStatus, string> = {
@@ -38,6 +39,44 @@ const STATUS_DOT: Record<SaveStatus, string> = {
   saving: 'bg-amber-400 animate-pulse',
   saved: 'bg-emerald-500',
   error: 'bg-red-500',
+  expired: 'bg-red-500',
+}
+
+/**
+ * Deliberately a banner and not a modal: the unsaved work only exists in this
+ * tab's memory, so anything that blocks or navigates away destroys exactly what
+ * it is meant to protect. Signing in happens in a second tab, which shares the
+ * cookie, and the retry then saves from here.
+ */
+function SessionExpiredBanner({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-900"
+    >
+      <AlertTriangle className="size-4 shrink-0 text-red-600" />
+      <p className="min-w-0 flex-1">
+        <strong className="font-semibold">Sua sessão expirou. As alterações atuais ainda não foram salvas.</strong>{' '}
+        Entre novamente em outra aba e depois tente salvar. Não feche nem recarregue esta aba: o
+        que você editou desde o último salvamento só existe aqui.
+      </p>
+      <a
+        href="/login"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300 transition-colors hover:bg-red-100"
+      >
+        Entrar novamente
+      </a>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="rounded-full bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 active:scale-95"
+      >
+        Tentar salvar novamente
+      </button>
+    </div>
+  )
 }
 
 export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }: BuilderProps) {
@@ -48,7 +87,21 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
   const dirty = useBuilder(store, (s) => s.dirty)
 
   const onSaved = useCallback(() => store.getState().markSaved(), [store])
-  const status = useAutosave(pageId, content, dirty, onSaved)
+  const { status, retry } = useAutosave(pageId, content, dirty, onSaved)
+
+  // The only thing standing between unsaved work and a reflex Ctrl+R. The
+  // browser owns the dialog; nothing here may draw its own.
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => {
+      // Both halves are needed: preventDefault is the modern spec, returnValue
+      // is what older engines actually read to decide whether to prompt.
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -73,6 +126,8 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-muted/20">
+      {status === 'expired' && <SessionExpiredBanner onRetry={retry} />}
+
       <header className="flex items-center justify-between gap-4 border-b border-border/70 bg-card/70 px-5 py-2.5 backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#0d9488] to-[#0f766e] text-white shadow-sm">
