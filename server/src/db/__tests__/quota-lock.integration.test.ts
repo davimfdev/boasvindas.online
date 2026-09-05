@@ -251,6 +251,13 @@ describeIntegration('BLK-3B against a real PostgreSQL', () => {
       await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
     })
 
+    // `\\s` resolves through the database collation, so on the production
+    // server it matches neither of these two. Migration 0006 spells the set out.
+    it('rejects an address padded with a byte order mark', async () => {
+      const email = '\ufeffcanon-' + randomUUID() + '@example.com\ufeff'
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
     // With every row canonical, the existing UNIQUE is the case-insensitive
     // uniqueness we wanted — no functional index needed.
     it('still rejects a duplicate of a canonical address', async () => {
