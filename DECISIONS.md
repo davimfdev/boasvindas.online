@@ -60,9 +60,14 @@ motivo — não apague. Só entra aqui o que outra pessoa poderia desfazer sem s
   despercebida com o monitoramento verde. `/health/ready` executa um `select 1`.
 - **`DATABASE_URL` e `AUTH_SECRET` são validadas no boot.** Sem elas o container
   sai imediatamente, em vez de falhar na primeira requisição.
-- **Migrations são um passo manual** (`npx drizzle-kit migrate` num shell do
+- **Migrations são um passo manual** (`npm run db:migrate:runtime` num shell do
   container). Não rodam no start — um start que migra sozinho transforma um
   deploy ruim em perda de dados.
+- **O runner usa o migrator do `drizzle-orm`, não o `drizzle-kit`.** O
+  `drizzle-kit` é ferramenta de desenvolvimento e não está na imagem de produção,
+  que instala com `--omit=dev`; depender dele obrigaria a baixar um pacote da
+  internet no meio de uma janela de manutenção, ou a inchar a imagem de produção
+  com ferramental de build.
 - **O `.dockerignore` é compartilhado pelos dois builds** e por isso não exclui
   `src/`, `public/`, `index.html`, `vite.config.ts` nem os `package.json`.
 

@@ -375,16 +375,69 @@ Variáveis: todas as do bloco backend da seção 5.
 
 ### 6.5 Migrations
 
-Elas não rodam sozinhas no start. **As cinco migrations existentes (`0000` a
-`0004`) já foram aplicadas em produção** — a `0003` criou a tabela `media` e a
-`0004` acrescentou `width`, `height` e `variants` a ela.
+**Migrations são manuais.** Nada as aplica sozinho: nem o build da imagem, nem o
+start do container, nem o deploy. Um deploy publica código novo e deixa o banco
+exatamente como estava — quem decide quando o schema muda é o operador.
 
-Para qualquer migration nova, depois do deploy da API, num shell do container
-`boasvindas-api`:
+As migrations `0000` a `0004` já foram aplicadas em produção; a `0005`
+(e-mail canônico) ainda não.
+
+> **O procedimento antigo (`npx drizzle-kit migrate` dentro do container) não
+> funciona** e foi removido daqui. O `drizzle-kit` é `devDependency` e a imagem
+> de runtime instala com `--omit=dev`, então ele não está lá; o
+> `drizzle.config.ts` também não é copiado. O `npx` tentaria baixar o pacote da
+> internet no meio de uma janela de manutenção. Verificado reproduzindo o
+> conteúdo exato da imagem: o comando antigo falha, o novo abaixo funciona.
+
+O runner novo usa o migrator que já vem no `drizzle-orm` — dependência de
+produção — e não precisa de nada além do que a imagem já contém.
+
+#### Procedimento
+
+**1. Backup, antes de qualquer coisa.** Ajuste usuário e banco ao que a sua VPS
+usa (observado: container `postgres`, usuário `admin`, banco `boasvindas`):
 
 ```bash
-npx drizzle-kit migrate
+docker exec postgres pg_dump -U admin -d boasvindas -Fc -f /tmp/pre-migracao.dump
+docker cp postgres:/tmp/pre-migracao.dump ./pre-migracao.dump
 ```
+
+**2. Deploy da API primeiro.** O código novo tem de conviver com o banco antigo,
+nunca o contrário.
+
+**3. Aplicar**, num shell do container da API:
+
+```bash
+npm run db:migrate:runtime
+```
+
+Equivalente, sem passar pelo npm: `node dist/scripts/migrate.js`.
+
+Ele lê `DATABASE_URL` do ambiente do próprio container, aplica o que estiver
+pendente e **não imprime a string de conexão**. Sucesso termina com código 0 e a
+linha `[migrate] done`; falha termina com código diferente de 0 e a razão real
+do PostgreSQL. Rodar de novo é seguro: o que já foi aplicado é ignorado.
+
+**4. Conferir o journal:**
+
+```sql
+SELECT hash, created_at FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 3;
+```
+
+**5. Conferir a aplicação:** `/api/health/ready` em 200 com `database: ok`, e um
+login real.
+
+#### Se algo der errado
+
+O migrator roda **tudo dentro de uma transação** (verificado em
+`drizzle-orm/pg-core/dialect.js`: `session.transaction` envolve todas as
+migrations pendentes). Uma falha no meio não deixa estado parcial — nada é
+aplicado e o journal não é escrito.
+
+Para uma migration **já aplicada**, o caminho é uma **migration nova para a
+frente**, ou restauração do dump do passo 1, conforme o incidente. **Não apague
+linhas de `drizzle.__drizzle_migrations` à mão**: o histórico de migrations é
+registro do que aconteceu, não mecanismo de rollback.
 
 As migrations vão dentro da imagem, em `/app/migrations`.
 
