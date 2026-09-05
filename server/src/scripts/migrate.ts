@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
-import { config, describeDatabaseTarget } from '../config.js'
+import { describeDatabaseTarget } from '../utils/database-url.js'
 
 /**
  * Two levels up lands on the folder that ships the SQL: `server/migrations` in
@@ -26,13 +26,35 @@ import { config, describeDatabaseTarget } from '../config.js'
 const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../migrations', import.meta.url))
 
 /**
+ * The runner asks for DATABASE_URL and nothing else.
+ *
+ * Importing `config.js` would validate the entire application at module load —
+ * it throws without `AUTH_SECRET` — and a database migration has no business
+ * demanding the session secret. That is exactly how this failed on the first
+ * real attempt from the deployed image.
+ */
+function requireDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL
+  if (!url) {
+    // Exits rather than throws: this runs before anything is opened, so there
+    // is nothing to clean up, and the operator gets the same one-line shape as
+    // every other failure instead of a stack trace.
+    console.error('[migrate] FAILED: DATABASE_URL environment variable is not set')
+    process.exit(1)
+  }
+  return url
+}
+
+const databaseUrl = requireDatabaseUrl()
+
+/**
  * Its own connection rather than the server's pool: this is a one-shot
  * sequential job, so a single link is enough, and `onnotice` keeps PostgreSQL's
  * "schema already exists, skipping" chatter out of the output — on a re-run it
  * is printed as a raw object and reads exactly like a failure, which is the
  * opposite of what an operator needs to see. The TLS rule mirrors db/index.ts.
  */
-const client = postgres(config.databaseUrl, {
+const client = postgres(databaseUrl, {
   max: 1,
   connect_timeout: 10,
   ssl: process.env.DATABASE_SSL === 'require' ? 'require' : undefined,
@@ -44,7 +66,7 @@ const db = drizzle(client)
 async function main(): Promise<void> {
   // describeDatabaseTarget gives host, port and database — never the user or
   // the password. The connection string must not reach a log line.
-  console.log(`[migrate] database -> ${describeDatabaseTarget(config.databaseUrl)}`)
+  console.log(`[migrate] database -> ${describeDatabaseTarget(databaseUrl)}`)
   console.log(`[migrate] folder   -> ${MIGRATIONS_FOLDER}`)
   console.log('[migrate] applying pending migrations…')
 

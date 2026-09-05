@@ -49,14 +49,23 @@ describeIntegration('the manual migration runner', () => {
   target.pathname = '/' + DB_NAME
   const targetUrl = target.toString()
 
-  /** Runs the compiled runner exactly as the operator command does. */
-  async function migrate(databaseUrl: string): Promise<Result> {
-    const env = {
-      ...process.env,
-      DATABASE_URL: databaseUrl,
-      AUTH_SECRET: 'a'.repeat(40),
-      TEST_DATABASE_URL: undefined,
-    }
+  /**
+   * Runs the compiled runner exactly as the operator command does.
+   *
+   * `bare` reproduces the container: PATH and DATABASE_URL, nothing else. The
+   * runner failed on the first real attempt from the deployed image precisely
+   * because it demanded AUTH_SECRET, so the environment has to be this empty
+   * for the test to mean anything.
+   */
+  async function migrate(databaseUrl: string | undefined, bare = false): Promise<Result> {
+    const env: NodeJS.ProcessEnv = bare
+      ? { PATH: process.env.PATH, ...(databaseUrl ? { DATABASE_URL: databaseUrl } : {}) }
+      : {
+          ...process.env,
+          DATABASE_URL: databaseUrl,
+          AUTH_SECRET: 'a'.repeat(40),
+          TEST_DATABASE_URL: undefined,
+        }
     try {
       const { stdout, stderr } = await run(process.execPath, [RUNNER], { env })
       return { code: 0, stdout, stderr }
@@ -119,6 +128,44 @@ describeIntegration('the manual migration runner', () => {
   it('never prints the connection string', async () => {
     const result = await migrate(targetUrl)
     expect(result.stdout + result.stderr).not.toContain(target.password)
+  })
+
+  // The failure seen on the first real run from the deployed image: the runner
+  // imported the application config, which validates AUTH_SECRET at load, and
+  // died before opening a connection. Migrating a database must not require the
+  // session secret.
+  describe('with nothing in the environment but DATABASE_URL', () => {
+    it('succeeds without AUTH_SECRET or any other application variable', async () => {
+      const result = await migrate(targetUrl, true)
+      expect(result.code).toBe(0)
+    })
+
+    it('reaches the database instead of dying at import time', async () => {
+      const result = await migrate(targetUrl, true)
+      expect(result.stdout).toContain('[migrate] done')
+    })
+
+    it('never mentions AUTH_SECRET', async () => {
+      const result = await migrate(targetUrl, true)
+      expect(result.stdout + result.stderr).not.toContain('AUTH_SECRET')
+    })
+
+    it('still hides the credentials', async () => {
+      const result = await migrate(targetUrl, true)
+      expect(result.stdout + result.stderr).not.toContain(target.password)
+    })
+  })
+
+  describe('without DATABASE_URL', () => {
+    it('exits non-zero', async () => {
+      const result = await migrate(undefined, true)
+      expect(result.code).not.toBe(0)
+    })
+
+    it('names the variable that is missing', async () => {
+      const result = await migrate(undefined, true)
+      expect(result.stderr).toContain('DATABASE_URL environment variable is not set')
+    })
   })
 
   describe('when the migration cannot be applied', () => {
