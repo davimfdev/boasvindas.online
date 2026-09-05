@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { act, render, screen, fireEvent, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { createMemoryRouter, Link, RouterProvider } from 'react-router-dom'
 import type { SaveStatus } from '../useAutosave'
 import type { PageContent } from '@/lib/blocks/schema'
 
@@ -42,10 +43,29 @@ beforeEach(() => {
   retryMock.mockReset()
 })
 
+/**
+ * The builder blocks navigation with `useBlocker`, which only exists on a data
+ * router, so the harness mounts a real one. `/outra` stands in for anywhere the
+ * host might go — the wordmark, the dashboard, anything.
+ */
 function renderBuilder() {
-  return render(
-    <Builder pageId="p1" title="Casa" whatsapp={null} theme="modern" initialContent={content} />
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/app/p1/edit',
+        element: (
+          <>
+            <Builder pageId="p1" title="Casa" whatsapp={null} theme="modern" initialContent={content} />
+            <Link to="/outra">sair daqui</Link>
+          </>
+        ),
+      },
+      { path: '/outra', element: <p>outra página</p> },
+    ],
+    { initialEntries: ['/app/p1/edit'] },
   )
+  const view = render(<RouterProvider router={router} />)
+  return Object.assign(view, { router })
 }
 
 /** Clicking a palette entry adds a block, which is what marks the store dirty. */
@@ -268,10 +288,107 @@ describe('Builder unsaved-changes guard', () => {
     expect(removed).toContain('beforeunload')
   })
 
+  it('keeps warning about reload even with the router guard in place', () => {
+    renderBuilder()
+    makeDirty()
+    expect(handlers.has('beforeunload')).toBe(true)
+  })
+
   it('stops warning when the builder unmounts', () => {
     const view = renderBuilder()
     makeDirty()
     view.unmount()
     expect(removed).toContain('beforeunload')
+  })
+})
+
+describe('Builder navigation guard', () => {
+  let confirmSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  function leaveByLink() {
+    fireEvent.click(screen.getByRole('link', { name: 'sair daqui' }))
+  }
+
+  it('lets navigation through untouched when everything is saved', async () => {
+    const { router } = renderBuilder()
+    leaveByLink()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/outra'))
+  })
+
+  it('does not ask anything when everything is saved', () => {
+    renderBuilder()
+    leaveByLink()
+    expect(confirmSpy).not.toHaveBeenCalled()
+  })
+
+  it('asks before leaving with unsaved work', () => {
+    renderBuilder()
+    makeDirty()
+    leaveByLink()
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'Você tem alterações que ainda não foram salvas. Sair agora vai descartá-las.',
+    )
+  })
+
+  it('stays put when the host cancels', () => {
+    const { router } = renderBuilder()
+    makeDirty()
+    leaveByLink()
+    expect(router.state.location.pathname).toBe('/app/p1/edit')
+  })
+
+  // Cancelling has to leave the work exactly where it was, not just the URL.
+  it('keeps the builder and its edits mounted when the host cancels', () => {
+    renderBuilder()
+    makeDirty()
+    leaveByLink()
+    expect(screen.getByRole('navigation', { name: 'Seções' })).toBeInTheDocument()
+  })
+
+  it('completes the navigation when the host confirms', async () => {
+    const { router } = renderBuilder()
+    makeDirty()
+    confirmSpy.mockReturnValue(true)
+    leaveByLink()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/outra'))
+  })
+
+  it('asks before going back with unsaved work', async () => {
+    const { router } = renderBuilder()
+    makeDirty()
+    await act(async () => { await router.navigate(-1) })
+    expect(confirmSpy).toHaveBeenCalled()
+  })
+
+  it('stays on the builder when a back is cancelled', async () => {
+    const { router } = renderBuilder()
+    makeDirty()
+    await act(async () => { await router.navigate(-1) })
+    expect(router.state.location.pathname).toBe('/app/p1/edit')
+  })
+
+  it('goes back when the host confirms', async () => {
+    const { router } = renderBuilder()
+    confirmSpy.mockReturnValue(true)
+    await act(async () => { await router.navigate('/outra') })
+    await act(async () => { await router.navigate('/app/p1/edit') })
+    makeDirty()
+    await act(async () => { await router.navigate(-1) })
+    await waitFor(() => expect(router.state.location.pathname).toBe('/outra'))
+  })
+
+  it('asks before going forward with unsaved work', async () => {
+    const { router } = renderBuilder()
+    await act(async () => { await router.navigate('/outra') })
+    await act(async () => { await router.navigate(-1) })
+    makeDirty()
+    await act(async () => { await router.navigate(1) })
+    expect(confirmSpy).toHaveBeenCalled()
   })
 })

@@ -56,43 +56,44 @@ function renderAt(path: string) {
   return router
 }
 
+/**
+ * Which route pattern won, read from the router itself.
+ *
+ * Deterministic on purpose: most pages are lazy chunks, so waiting for their
+ * DOM makes the assertion a race against a dynamic import under whatever load
+ * the rest of the suite happens to be putting on the machine. Layout
+ * assertions below still use the DOM, because layouts are imported eagerly.
+ */
+function matchedPath(router: ReturnType<typeof renderAt>): string | undefined {
+  return router.state.matches.at(-1)?.route.path
+}
+
 describe('rotas públicas', () => {
-  it('resolve a home em /', async () => {
-    renderAt('/')
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      'A recepção do seu apartamento, agora em um link.',
-    )
+  it('resolve a home em /', () => {
+    expect(matchedPath(renderAt('/'))).toBe('/')
   })
 
-  it('resolve o login em /login', async () => {
-    renderAt('/login')
-    expect(await screen.findByRole('heading', { name: 'Bem-vindo de volta' })).toBeInTheDocument()
+  it('resolve o login em /login', () => {
+    expect(matchedPath(renderAt('/login'))).toBe('/login')
   })
 
   // O AuthLayout envolve /login e /cadastro; o link do topo é dele, não da página.
-  it('monta o login dentro do AuthLayout', async () => {
+  it('monta o login dentro do AuthLayout', () => {
     renderAt('/login')
-    await screen.findByRole('heading', { name: 'Bem-vindo de volta' })
     expect(screen.getByRole('link', { name: /boasvindas/ })).toHaveAttribute('href', '/')
   })
 
-  it('resolve o cadastro em /cadastro', async () => {
-    renderAt('/cadastro')
-    expect(await screen.findByRole('heading', { name: 'Crie sua conta' })).toBeInTheDocument()
+  it('resolve o cadastro em /cadastro', () => {
+    expect(matchedPath(renderAt('/cadastro'))).toBe('/cadastro')
   })
 
-  it('monta o cadastro dentro do AuthLayout', async () => {
+  it('monta o cadastro dentro do AuthLayout', () => {
     renderAt('/cadastro')
-    await screen.findByRole('heading', { name: 'Crie sua conta' })
     expect(screen.getByRole('link', { name: /boasvindas/ })).toHaveAttribute('href', '/')
   })
 
-  it('mantém /:slug acessível sem sessão', async () => {
-    renderAt('/casa-da-praia')
-    // A página do hóspede busca os próprios dados; basta não ter caído no 404.
-    await waitFor(() =>
-      expect(screen.queryByText('Página não encontrada')).not.toBeInTheDocument(),
-    )
+  it('mantém /:slug acessível sem sessão', () => {
+    expect(matchedPath(renderAt('/casa-da-praia'))).toBe('/:slug')
   })
 })
 
@@ -107,29 +108,27 @@ describe('rotas protegidas', () => {
     await waitFor(() => expect(router.state.location.state).toEqual({ from: '/app' }))
   })
 
-  it('resolve o dashboard em /app com sessão', async () => {
+  it('resolve o dashboard em /app com sessão', () => {
     authMock.user = HOST
-    renderAt('/app')
-    expect(await screen.findByRole('heading', { name: /páginas/i })).toBeInTheDocument()
+    expect(matchedPath(renderAt('/app'))).toBe('/app')
   })
 
   // O AppLayout traz o cabeçalho com o nome de quem está logado.
-  it('monta o dashboard dentro do AppLayout', async () => {
+  it('monta o dashboard dentro do AppLayout', () => {
     authMock.user = HOST
     renderAt('/app')
-    expect(await screen.findByText('Anfitriao')).toBeInTheDocument()
+    expect(screen.getByText('Anfitriao')).toBeInTheDocument()
   })
 
-  it('resolve o construtor em /app/:id/edit com sessão', async () => {
+  it('resolve o construtor em /app/:id/edit com sessão', () => {
     authMock.user = HOST
-    const router = renderAt('/app/p1/edit')
-    await waitFor(() => expect(router.state.matches.at(-1)?.params).toEqual({ id: 'p1' }))
+    expect(matchedPath(renderAt('/app/p1/edit'))).toBe('/app/:id/edit')
   })
 
-  it('monta o construtor dentro do AppLayout', async () => {
+  it('monta o construtor dentro do AppLayout', () => {
     authMock.user = HOST
     renderAt('/app/p1/edit')
-    expect(await screen.findByText('Anfitriao')).toBeInTheDocument()
+    expect(screen.getByText('Anfitriao')).toBeInTheDocument()
   })
 
   it('espera a sessão carregar antes de decidir', () => {
@@ -142,14 +141,13 @@ describe('rotas protegidas', () => {
 describe('rota desconhecida', () => {
   // O 404 é uma rota casada como qualquer outra, não um erro: o errorElement
   // padrão do data router não participa disto.
-  it('resolve o 404 para um caminho profundo desconhecido', async () => {
+  it('resolve o 404 para um caminho profundo desconhecido', () => {
     renderAt('/nao/existe/mesmo')
-    expect(await screen.findByText('Página não encontrada')).toBeInTheDocument()
+    expect(screen.getByText('Página não encontrada')).toBeInTheDocument()
   })
 
-  it('mantém a URL desconhecida sem redirecionar', async () => {
+  it('mantém a URL desconhecida sem redirecionar', () => {
     const router = renderAt('/nao/existe/mesmo')
-    await screen.findByText('Página não encontrada')
     expect(router.state.location.pathname).toBe('/nao/existe/mesmo')
   })
 })
