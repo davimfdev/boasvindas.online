@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useBlocker } from 'react-router-dom'
 import { AlertTriangle, ExternalLink, Palette as PaletteIcon, Sparkles } from 'lucide-react'
 import {
   DndContext,
@@ -10,6 +10,7 @@ import {
 } from '@dnd-kit/core'
 import type { BlockType, PageContent } from '@/lib/blocks/schema'
 import { isReauthSuccess, openReauthPopup } from '@/lib/reauth'
+import { DISCARD_UNSAVED_MESSAGE, useUnsavedChanges } from '@/lib/unsaved-changes'
 import { createBuilderStore, useBuilder } from './store'
 import { useAutosave, type SaveStatus } from './useAutosave'
 import { Palette } from './Palette'
@@ -141,6 +142,23 @@ export function Builder({ pageId, title, whatsapp, theme, slug, initialContent }
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
+
+  // beforeunload never fires for navigation inside the SPA, so the router has
+  // to be asked separately. This covers every internal link and the browser's
+  // Back and Forward, without any of them knowing about the builder.
+  const blocker = useBlocker(dirty)
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (window.confirm(DISCARD_UNSAVED_MESSAGE)) blocker.proceed()
+    else blocker.reset()
+  }, [blocker])
+
+  // Logout destroys the session before it navigates, and that unmounts this
+  // component through RequireAuth — no navigation the blocker above could
+  // catch. Publishing the flag lets the logout button ask first.
+  const { setUnsavedChanges } = useUnsavedChanges()
+  useEffect(() => { setUnsavedChanges(dirty) }, [dirty, setUnsavedChanges])
+  useEffect(() => () => setUnsavedChanges(false), [setUnsavedChanges])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
