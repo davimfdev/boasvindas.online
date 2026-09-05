@@ -282,9 +282,11 @@ media
 | `0003_lyrical_wind_dancer` | cria `media` |
 | `0004_worried_zuras` | adiciona `width`, `height`, `variants` a `media` |
 
-**Não rodam sozinhas no start.** São um `npx drizzle-kit migrate` manual num
-shell do container `boasvindas-api`. Elas viajam dentro da imagem em
-`/app/migrations`.
+**Não rodam sozinhas no start.** São um `npm run db:migrate:runtime` manual num
+shell do container da API — um script que usa o migrator do próprio
+`drizzle-orm`, porque o `drizzle-kit` é `devDependency` e não existe na imagem de
+produção. Elas viajam dentro da imagem em `/app/migrations`. Procedimento
+completo em [`VPS_MIGRATION.md`](./VPS_MIGRATION.md), seção 6.5.
 
 ### Formato de `pages.content`
 
