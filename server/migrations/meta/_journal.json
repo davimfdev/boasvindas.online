@@ -43,6 +43,13 @@
       "when": 1788636579625,
       "tag": "0005_email_canonico",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788650768135,
+      "tag": "0006_email_canonico_ws",
+      "breakpoints": true
     }
   ]
 }

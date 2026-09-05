@@ -108,7 +108,7 @@ describeIntegration('the manual migration runner', () => {
   it('records every migration in the drizzle journal', async () => {
     const [row] = await onTarget((sql) => sql`
       SELECT count(*)::int AS total FROM drizzle.__drizzle_migrations`)
-    expect(row.total).toBe(6)
+    expect(row.total).toBe(7)
   })
 
   // Running it twice must be safe: an operator who is unsure whether it already
@@ -122,7 +122,7 @@ describeIntegration('the manual migration runner', () => {
     await migrate(targetUrl)
     const [row] = await onTarget((sql) => sql`
       SELECT count(*)::int AS total FROM drizzle.__drizzle_migrations`)
-    expect(row.total).toBe(6)
+    expect(row.total).toBe(7)
   })
 
   it('never prints the connection string', async () => {
