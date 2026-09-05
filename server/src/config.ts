@@ -16,20 +16,6 @@ function list(name: string, fallback: string): string[] {
     .filter(Boolean)
 }
 
-/**
- * Host, port and database name of a connection string — never the user or the
- * password. The only form of DATABASE_URL that may reach a log line.
- */
-export function describeDatabaseTarget(url: string): string {
-  try {
-    const parsed = new URL(url)
-    const port = parsed.port || '5432'
-    return `${parsed.hostname}:${port}${parsed.pathname}`
-  } catch {
-    return '<unparseable DATABASE_URL>'
-  }
-}
-
 export const config = {
   isProduction: process.env.NODE_ENV === 'production',
   host: process.env.HOST ?? '0.0.0.0',

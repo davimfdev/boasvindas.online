@@ -1,5 +1,6 @@
 import { createApp } from './app.js'
-import { config, describeDatabaseTarget } from './config.js'
+import { config } from './config.js'
+import { describeDatabaseTarget } from './utils/database-url.js'
 import { client } from './db/index.js'
 
 const app = createApp()
