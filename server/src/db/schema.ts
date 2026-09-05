@@ -1,4 +1,5 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { check, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import type { PageContent } from '../lib/blocks/schema.js'
 
 export const users = pgTable('users', {
@@ -8,7 +9,24 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   plan:         text('plan').notNull().default('free'),
   createdAt:    timestamp('created_at', { withTimezone: true }).defaultNow(),
-})
+}, (t) => [
+  // The application normalises on the way in; this is what makes it an
+  // invariant rather than a convention. With every row canonical, the existing
+  // UNIQUE(email) is already the case-insensitive uniqueness we want — no
+  // functional index and no citext needed.
+  //
+  // Not `btrim`: with one argument it strips only the ASCII space, so a raw
+  // insert padded with TAB, CR, LF or NBSP would slip past while the
+  // application's `trim()` would have removed it. `\s` covers those and the
+  // Unicode separators. See migrations/0005 for the one codepoint it does not.
+  check(
+    'users_email_canonical',
+    // The backslashes are doubled because a tagged template hands Drizzle the
+    // cooked string: `\s` would arrive as a bare `s` and the regex would strip
+    // the letter instead of whitespace.
+    sql`${t.email} = lower(regexp_replace(${t.email}, '^\\s+|\\s+$', '', 'g'))`,
+  ),
+])
 
 export const pages = pgTable('pages', {
   id:        uuid('id').primaryKey().defaultRandom(),

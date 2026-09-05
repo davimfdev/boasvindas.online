@@ -50,6 +50,20 @@ function signIn() {
   fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
 }
 
+// Um teclado de celular capitalizando a primeira letra é justamente como uma
+// conta nasce com e-mail fora do padrão canônico.
+describe('campo de e-mail em qualquer modo', () => {
+  it('desliga a capitalização automática no login', () => {
+    renderLogin('/login')
+    expect(screen.getByLabelText('Email')).toHaveAttribute('autocapitalize', 'none')
+  })
+
+  it('desliga a autocorreção no login', () => {
+    renderLogin('/login')
+    expect(screen.getByLabelText('Email')).toHaveAttribute('autocorrect', 'off')
+  })
+})
+
 describe('LoginPage in reauth mode', () => {
   it('announces that the session expired', () => {
     renderLogin('/login?reauth=1')

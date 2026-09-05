@@ -51,7 +51,7 @@ export function LoginPage() {
         {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>}
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required autoComplete="email" />
+          <Input id="email" name="email" type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="pwd">Senha</Label>

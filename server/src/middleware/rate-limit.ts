@@ -14,6 +14,7 @@
 
 import { MemoryStore, ipKeyGenerator, rateLimit, type Options, type RateLimitRequestHandler } from 'express-rate-limit'
 import type { Request, Response } from 'express'
+import { normalizeEmail } from '../utils/email.js'
 
 const MINUTES = 60 * 1000
 const HOURS = 60 * MINUTES
@@ -44,11 +45,6 @@ function createLimiter(options: Partial<Options>): RateLimitRequestHandler {
   })
 }
 
-/** Same bucket whatever casing or padding the form sent. */
-function normalizeEmail(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase()
-}
-
 /**
  * Brute force against one account.
  *
@@ -63,6 +59,7 @@ export const loginAccountLimiter = createLimiter({
   windowMs: 15 * MINUTES,
   limit: 10,
   skipSuccessfulRequests: true,
+  // Same helper the routes use, so the bucket and the account are the same thing.
   keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? '')}:${normalizeEmail(req.body?.email)}`,
 })
 

@@ -199,6 +199,75 @@ describeIntegration('BLK-3B against a real PostgreSQL', () => {
     })
   })
 
+  // The canonical-email invariant lives in the database, not only in the zod
+  // schema, so it is the database that has to be asked whether it holds.
+  describe('canonical e-mail invariant', () => {
+    const CANONICAL_VIOLATION = '23514'  // check_violation
+    const UNIQUE_VIOLATION = '23505'
+
+    async function insertRaw(email: string) {
+      return client.unsafe(
+        'INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3)',
+        [email, 'Bruto', 'x'],
+      )
+    }
+
+    it('accepts a canonical address', async () => {
+      const email = 'canon-' + randomUUID() + '@example.com'
+      await expect(insertRaw(email)).resolves.toBeDefined()
+      await db.delete(users).where(eq(users.email, email))
+    })
+
+    // Bypassing the application must not bypass the invariant.
+    it('rejects an address with uppercase, even inserted raw', async () => {
+      const email = 'Canon-' + randomUUID() + '@Example.com'
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
+    it('rejects an address padded with ASCII spaces', async () => {
+      const email = '  canon-' + randomUUID() + '@example.com  '
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
+    // btrim() with one argument strips only the ASCII space, so these four
+    // are exactly the cases a naive constraint would have let through.
+    it('rejects an address padded with a tab', async () => {
+      const email = '\tcanon-' + randomUUID() + '@example.com\t'
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
+    it('rejects an address padded with a carriage return', async () => {
+      const email = '\rcanon-' + randomUUID() + '@example.com\r'
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
+    it('rejects an address padded with a line feed', async () => {
+      const email = '\ncanon-' + randomUUID() + '@example.com\n'
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
+    it('rejects an address padded with a non-breaking space', async () => {
+      const email = '\u00a0canon-' + randomUUID() + '@example.com\u00a0'
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: CANONICAL_VIOLATION })
+    })
+
+    // With every row canonical, the existing UNIQUE is the case-insensitive
+    // uniqueness we wanted — no functional index needed.
+    it('still rejects a duplicate of a canonical address', async () => {
+      const email = 'dup-' + randomUUID() + '@example.com'
+      await insertRaw(email)
+      await expect(insertRaw(email)).rejects.toMatchObject({ code: UNIQUE_VIOLATION })
+      await db.delete(users).where(eq(users.email, email))
+    })
+
+    it('reports the constraint by name, so a failure is diagnosable', async () => {
+      const email = 'Nome-' + randomUUID() + '@example.com'
+      await expect(insertRaw(email)).rejects.toMatchObject({
+        constraint_name: 'users_email_canonical',
+      })
+    })
+  })
+
   describe('the users -> pages -> media ordering', () => {
     const DEADLOCK_DETECTED = '40P01'
     const INSERT_MEDIA =

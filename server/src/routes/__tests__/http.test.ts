@@ -3,11 +3,14 @@ import request from 'supertest'
 
 // Postgres is the one system boundary these tests mock: every route is exercised
 // for real, but no socket is opened and no database is touched.
-const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock } = vi.hoisted(() => {
+const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock, lastInsert } = vi.hoisted(() => {
   let rows: unknown[] = []
   let queue: unknown[][] = []
   let failure: Error | null = null
   let databaseUp = true
+  // What the route handed to insert().values(): the only way to assert on the
+  // value actually written, since the mock ignores the query itself.
+  const inserted: Record<string, unknown>[] = []
 
   const nextRows = () => (queue.length > 0 ? queue.shift()! : rows)
 
@@ -17,9 +20,10 @@ const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock 
         ? Promise.reject(failure).then(resolve, reject)
         : Promise.resolve(nextRows()).then(resolve, reject),
   }
-  for (const method of ['from', 'where', 'limit', 'orderBy', 'values', 'returning', 'set', 'for']) {
+  for (const method of ['from', 'where', 'limit', 'orderBy', 'returning', 'set', 'for']) {
     chain[method] = () => chain
   }
+  chain.values = (value: Record<string, unknown>) => { inserted.push(value); return chain }
   const entry = () => chain
   const dbEntry = { select: entry, insert: entry, update: entry, delete: entry }
 
@@ -39,6 +43,8 @@ const { setRows, setRowsPerQuery, setFailure, dbMock, setDatabaseUp, clientMock 
     /** One entry per query, in the order the route runs them. */
     setRowsPerQuery: (next: unknown[][]) => { rows = []; queue = [...next]; failure = null },
     setFailure: (error: Error) => { failure = error },
+    /** The most recent row handed to insert().values(). */
+    lastInsert: () => inserted.at(-1),
     /** Controls what the tagged-template client mock does for `select 1`. */
     setDatabaseUp: (next: boolean) => { databaseUp = next },
     dbMock: {
@@ -347,5 +353,75 @@ describe('public page', () => {
     ])
     const res = await request(app).get('/api/public/pages/minha-suite')
     expect(res.body.page.slug).toBe('minha-suite')
+  })
+})
+
+describe('identidade canônica de e-mail', () => {
+  const STORED = 'host@example.com'
+
+  async function register(email: string) {
+    return request(app)
+      .post('/api/auth/register')
+      .send({ name: 'Host', email, password: 'senha-bem-longa' })
+  }
+
+  async function login(email: string, password = 'senha-correta') {
+    setRows([{ ...USER, passwordHash: await hashPassword('senha-correta') }])
+    return request(app).post('/api/auth/login').send({ email, password })
+  }
+
+  it('grava o e-mail em minúsculas', async () => {
+    setRowsPerQuery([[], [{ id: USER.id, email: STORED }]])
+    await register('HOST@Example.COM')
+    expect(lastInsert()?.email).toBe(STORED)
+  })
+
+  // Espaço colado num e-mail válido não pode reprovar o cadastro.
+  it('grava o e-mail sem os espaços em volta', async () => {
+    setRowsPerQuery([[], [{ id: USER.id, email: STORED }]])
+    await register('  host@example.com  ')
+    expect(lastInsert()?.email).toBe(STORED)
+  })
+
+  it('aceita um e-mail que só era inválido por causa dos espaços', async () => {
+    setRowsPerQuery([[], [{ id: USER.id, email: STORED }]])
+    const res = await register('  host@example.com  ')
+    expect(res.status).toBe(201)
+  })
+
+  it('trata uma variante de caixa como a mesma conta já existente', async () => {
+    setRows([{ id: USER.id }])
+    const res = await register('HOST@EXAMPLE.COM')
+    expect(res.body.error.code).toBe('EMAIL_EXISTS')
+  })
+
+  it('trata uma variante com espaços como a mesma conta já existente', async () => {
+    setRows([{ id: USER.id }])
+    const res = await register('  Host@Example.Com  ')
+    expect(res.body.error.code).toBe('EMAIL_EXISTS')
+  })
+
+  it('autentica a conta gravada em minúsculas a partir de um e-mail em maiúsculas', async () => {
+    const res = await login('HOST@EXAMPLE.COM')
+    expect(res.body.user).toEqual(USER)
+  })
+
+  it('autentica ignorando os espaços em volta', async () => {
+    const res = await login('  Host@Example.Com  ')
+    expect(res.body.user).toEqual(USER)
+  })
+
+  // A proteção de tempo constante contra enumeração continua de pé.
+  it('segue devolvendo CREDENTIALS para um e-mail desconhecido', async () => {
+    setRows([])
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'NINGUEM@Example.com', password: 'seja-o-que-for' })
+    expect(res.body.error.code).toBe('CREDENTIALS')
+  })
+
+  it('continua recusando um e-mail que não é e-mail', async () => {
+    const res = await register('  nao-e-email  ')
+    expect(res.body.error.code).toBe('VALIDATION')
   })
 })
