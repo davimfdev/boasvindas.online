@@ -10,6 +10,7 @@ import {
   signSessionToken,
 } from '../services/session.js'
 import { isUniqueViolation } from '../middleware/error.js'
+import { normalizeEmail } from '../utils/email.js'
 import {
   loginAccountLimiter,
   loginIpLimiter,
@@ -18,14 +19,21 @@ import {
 
 export const authRouter: Router = Router()
 
+/**
+ * Normalised before it is validated, so trailing spaces from a paste do not
+ * reject an address that is otherwise fine, and every route below receives the
+ * canonical value without repeating the rule.
+ */
+const emailField = z.string().transform(normalizeEmail).pipe(z.string().email())
+
 const registerSchema = z.object({
   name:  z.string().min(2).max(100),
-  email: z.string().email(),
+  email: emailField,
   pwd:   z.string().min(8),
 })
 
 const loginSchema = z.object({
-  email:    z.string().email(),
+  email:    emailField,
   password: z.string().min(1),
 })
 

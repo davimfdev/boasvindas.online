@@ -42,7 +42,7 @@ export function CadastroPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required />
+          <Input id="email" name="email" type="email" required autoCapitalize="none" autoCorrect="off" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="pwd">Senha</Label>
