@@ -188,4 +188,5 @@ anterior (Next.js, Netlify, Neon) e não devem ser usados como referência.
 
 ## License
 
-Copyright © 2026 Davi Monteiro Fonseca. All rights reserved.
+Copyright © 2026 Davi Monteiro Fonseca. All rights reserved.  
+See [LICENSE](LICENSE) for details.
