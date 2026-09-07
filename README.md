@@ -26,19 +26,19 @@ Estado real de cada área, incluindo o que está pendente:
 
 ## Stack
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend | React 19 + Vite 8 (SPA, React Router data router) |
-| Backend | Express 5 + TypeScript (ESM, Node 22) |
-| Linguagem | TypeScript |
-| Estilo | Tailwind CSS v4 + shadcn/ui + Base UI |
-| Estado | Zustand (construtor) |
-| Animação | GSAP (ScrollTrigger) |
-| Validação | Zod, compartilhado entre frontend e API |
-| Auth | JWT HS256 (`jose`) em cookie httpOnly + bcrypt custo 12 |
-| Banco | Drizzle ORM + PostgreSQL (driver `postgres`) |
-| Imagens | multer (memória) + sharp (WebP + variantes) |
-| Deploy | Coolify + Nginx Proxy Manager (VPS própria) |
+| Camada    | Tecnologia                                              |
+| --------- | ------------------------------------------------------- |
+| Frontend  | React 19 + Vite 8 (SPA, React Router data router)       |
+| Backend   | Express 5 + TypeScript (ESM, Node 22)                   |
+| Linguagem | TypeScript                                              |
+| Estilo    | Tailwind CSS v4 + shadcn/ui + Base UI                   |
+| Estado    | Zustand (construtor)                                    |
+| Animação  | GSAP (ScrollTrigger)                                    |
+| Validação | Zod, compartilhado entre frontend e API                 |
+| Auth      | JWT HS256 (`jose`) em cookie httpOnly + bcrypt custo 12 |
+| Banco     | Drizzle ORM + PostgreSQL (driver `postgres`)            |
+| Imagens   | multer (memória) + sharp (WebP + variantes)             |
+| Deploy    | Coolify + Nginx Proxy Manager (VPS própria)             |
 
 ## Estrutura
 
@@ -110,18 +110,18 @@ guardam segredo.
 
 ## API
 
-| Método | Rota | Auth |
-|---|---|---|
-| GET | `/health`, `/health/ready` | pública |
-| POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | pública |
-| GET | `/api/auth/session` | cookie |
-| GET, POST | `/api/pages` | cookie |
-| GET, PUT, DELETE | `/api/pages/:id` | cookie |
-| POST | `/api/pages/:id/publish` | cookie |
-| POST | `/api/media/upload` | cookie |
-| GET | `/api/media/:id?w=` | pública |
-| DELETE | `/api/media/:id` | cookie |
-| GET | `/api/public/pages/:slug` | pública |
+| Método           | Rota                                                        | Auth    |
+| ---------------- | ----------------------------------------------------------- | ------- |
+| GET              | `/health`, `/health/ready`                                  | pública |
+| POST             | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | pública |
+| GET              | `/api/auth/session`                                         | cookie  |
+| GET, POST        | `/api/pages`                                                | cookie  |
+| GET, PUT, DELETE | `/api/pages/:id`                                            | cookie  |
+| POST             | `/api/pages/:id/publish`                                    | cookie  |
+| POST             | `/api/media/upload`                                         | cookie  |
+| GET              | `/api/media/:id?w=`                                         | pública |
+| DELETE           | `/api/media/:id`                                            | cookie  |
+| GET              | `/api/public/pages/:slug`                                   | pública |
 
 `/health` só prova que o processo subiu; `/health/ready` consulta o banco e
 responde 503 quando ele está inalcançável.
@@ -169,15 +169,23 @@ passo completo, variáveis de ambiente, migração do banco e troubleshooting em
 
 ## Documentação
 
-| Documento | Para quê |
-|---|---|
-| [PROJECT_STATE.md](./PROJECT_STATE.md) | o que está rodando agora, bloqueadores, próximos passos |
-| [docs/CURRENT_ARCHITECTURE.md](./docs/CURRENT_ARCHITECTURE.md) | o que existe no código hoje |
-| [DECISIONS.md](./DECISIONS.md) | por que a arquitetura é assim |
-| [ROADMAP.md](./ROADMAP.md) | para onde o produto vai |
-| [docs/VPS_MIGRATION.md](./docs/VPS_MIGRATION.md) | runbook de deploy e validação |
-| [deploy/nginx-proxy-manager/](./deploy/nginx-proxy-manager/) | configuração e páginas de indisponibilidade do proxy |
-| [SPRINT-16H.md](./SPRINT-16H.md) | histórico: escopo do MVP de 16h |
+| Documento                                                      | Para quê                                                |
+| -------------------------------------------------------------- | ------------------------------------------------------- |
+| [PROJECT_STATE.md](./PROJECT_STATE.md)                         | o que está rodando agora, bloqueadores, próximos passos |
+| [docs/CURRENT_ARCHITECTURE.md](./docs/CURRENT_ARCHITECTURE.md) | o que existe no código hoje                             |
+| [DECISIONS.md](./DECISIONS.md)                                 | por que a arquitetura é assim                           |
+| [ROADMAP.md](./ROADMAP.md)                                     | para onde o produto vai                                 |
+| [docs/VPS_MIGRATION.md](./docs/VPS_MIGRATION.md)               | runbook de deploy e validação                           |
+| [deploy/nginx-proxy-manager/](./deploy/nginx-proxy-manager/)   | configuração e páginas de indisponibilidade do proxy    |
+| [SPRINT-16H.md](./SPRINT-16H.md)                               | histórico: escopo do MVP de 16h                         |
 
 `ARCHITECTURE.md` e `STACK.md` na raiz são **históricos**: descrevem a stack
 anterior (Next.js, Netlify, Neon) e não devem ser usados como referência.
+
+
+
+---
+
+## License
+
+Copyright © 2026 Davi Monteiro Fonseca. All rights reserved.
