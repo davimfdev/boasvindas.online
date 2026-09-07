@@ -42,3 +42,6 @@ CLAUDE.local.md.example
 .agents/
 .codex/
 .idea/
+
+.claude/
+gitleaks-report*.json
