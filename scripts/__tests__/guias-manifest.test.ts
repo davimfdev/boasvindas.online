@@ -39,9 +39,14 @@ describe('assertManifest', () => {
     expect(() => assertManifest([entry({ output: 'web-checkin' })])).toThrow(/não descrevem/)
   })
 
-  it('recusa output duplicado entre entradas', () => {
-    const duplicated = [entry(), entry({ dir: 'outro', route: '/webcheckin/' })]
-    expect(() => assertManifest(duplicated)).toThrow(/duplicad/)
+  it('recusa route duplicada entre entradas', () => {
+    const duplicated = [entry(), entry({ dir: 'outro' })]
+    expect(() => assertManifest(duplicated)).toThrow(/route duplicado/)
+  })
+
+  it('recusa dir duplicado entre entradas', () => {
+    const duplicated = [entry(), entry({ route: '/outro/', output: 'outro' })]
+    expect(() => assertManifest(duplicated)).toThrow(/dir duplicado/)
   })
 
   it('aceita uma rota de dois segmentos', () => {

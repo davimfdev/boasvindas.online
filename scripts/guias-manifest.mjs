@@ -73,7 +73,11 @@ export function assertManifest(entries) {
       throw new Error(`[guias] ${dir}: route "${route}" e output "${output}" não descrevem o mesmo caminho`)
     }
 
-    for (const key of /** @type {const} */ (['dir', 'route', 'output'])) {
+    // `output` nao entra aqui: a checagem de acoplamento acima garante que
+    // `/${output}/` === route, entao um output duplicado implica um route
+    // duplicado e seria sempre pego pela linha de cima. Um terceiro item nesta
+    // lista seria um branch que nenhuma entrada consegue alcancar.
+    for (const key of /** @type {const} */ (['dir', 'route'])) {
       if (seen[key].has(guia[key])) {
         throw new Error(`[guias] ${key} duplicado no manifesto: "${guia[key]}"`)
       }
