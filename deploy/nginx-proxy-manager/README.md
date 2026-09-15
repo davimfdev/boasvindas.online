@@ -18,6 +18,10 @@ O bloco *Advanced* completo do proxy host, os comandos de validação e o
 procedimento de rollback estão em
 [`../../docs/VPS_MIGRATION.md`](../../docs/VPS_MIGRATION.md), seção 7.
 
+Desde 2026-09-15 existe um segundo proxy host, `alugagoias.boasvindas.online`,
+apontando para o mesmo container `boasvindas-site`. Ele reaproveita as mesmas
+páginas de erro deste diretório. Ver `docs/VPS_MIGRATION.md`, seção 7.
+
 ## O que este diretório não é
 
 Não é um segundo sistema de páginas de erro. O 404 de rota do SPA continua sendo

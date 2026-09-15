@@ -733,6 +733,32 @@ e recarrega em segundos; volta-se à página padrão do openresty, sem redeploy 
 container e sem tocar na aplicação. O arquivo em `/data/errors/` pode ficar onde
 está — sem o `error_page` ele deixa de ser referenciado.
 
+### Proxy host de `alugagoias.boasvindas.online`
+
+Segundo proxy host, criado em 2026-09-15, apontando para o **mesmo** container
+`boasvindas-site`. Quem separa os dois sites é o `server_name` dentro do
+container, não o proxy.
+
+```
+Domain:   alugagoias.boasvindas.online
+Frontend: / -> boasvindas-site:80
+Scheme:   http
+SSL:      Let's Encrypt, Force SSL, HTTP/2
+Options:  Cache Assets desligado
+```
+
+`Cache Assets` precisa continuar **desligado**: o nginx do container já emite
+`immutable` em `/assets/` e `no-cache` no `index.html`. Se o NPM cachear por
+conta própria, ele guarda o `index.html` e um deploy passa a servir referência
+de asset antiga.
+
+O bloco *Advanced* é o mesmo do host principal, inclusive `resolver`,
+`set $api_backend` e a Custom Location `/api/` — usada a partir do passo 3 da
+migração, quando o feedback do Casa Coimbra passa a bater no `boasvindas-api`.
+
+Validado em 2026-09-15: `GET /` respondeu `HTTP/2 200` e `GET /api/health`
+respondeu `{"status":"ok"}`.
+
 ---
 
 ## 8. Autenticação e callbacks
