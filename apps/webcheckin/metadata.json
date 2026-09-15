@@ -3,8 +3,5 @@
   "description": "Sistema completo para cadastro de hóspedes em Goiânia, geração de contratos de temporada e integração com assinaturas digitais.",
   "requestFramePermissions": [
     "camera"
-  ],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

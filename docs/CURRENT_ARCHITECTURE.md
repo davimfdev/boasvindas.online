@@ -17,15 +17,17 @@
 
 ## 1. Visão geral
 
-Dois artefatos independentes no mesmo repositório. **Não é monorepo** — sem
-Turborepo, sem workspaces, sem tooling compartilhado. Cada um tem seu
-`package.json`, seu `tsconfig`, seus testes e seu Dockerfile.
+Vários artefatos independentes no mesmo repositório. **Não é monorepo** — sem
+Turborepo, sem workspaces, sem tooling compartilhado. Cada um tem seu próprio
+`package.json` e `tsconfig`; `boasvindas-site` e `boasvindas-api` também têm
+Dockerfile e testes próprios, enquanto os guias (ver a linha `guias` abaixo)
+não empacotam nada sozinhos — entram na imagem de `boasvindas-site`.
 
 | Artefato | Onde | O que é | Porta |
 |---|---|---|---|
 | `boasvindas-site` | `/` (raiz) | SPA React 19 + Vite 8, saída estática em `/dist`, servida por nginx | 80 |
 | `boasvindas-api` | `/server` | API Express 5 + TypeScript ESM | 3000 |
-| `guias` | `/apps` | Seis projetos Vite independentes, servidos por `boasvindas-site` em `alugagoias.boasvindas.online` | 80 |
+| `guias` | `/apps` | Projetos Vite independentes (hoje só `webcheckin`, mais cinco previstos), sem deploy próprio: o build entra em `/usr/share/nginx/guias` dentro da própria imagem de `boasvindas-site` e é servido pelo segundo `server` block do `nginx.conf` | — (dentro da porta 80 de `boasvindas-site`) |
 | `app-postgres` | — | PostgreSQL existente na VPS, **não gerenciado por este projeto** | 5432 (interno) |
 
 Os guias **não** são um workspace: cada um tem seu `package.json` e seu

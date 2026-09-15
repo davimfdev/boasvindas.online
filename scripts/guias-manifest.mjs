@@ -51,7 +51,7 @@ export function assertManifest(entries) {
     throw new Error('[guias] manifesto vazio')
   }
 
-  const seen = { dir: new Set(), route: new Set(), output: new Set() }
+  const seen = { dir: new Set(), route: new Set() }
 
   for (const guia of entries) {
     const { dir, route, output, title, listed } = guia

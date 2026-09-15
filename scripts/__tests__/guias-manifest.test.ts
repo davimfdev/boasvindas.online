@@ -56,9 +56,14 @@ describe('assertManifest', () => {
 })
 
 describe('route e output não são intercambiáveis', () => {
-  // Esta é a razão de existirem dois campos. Se alguém unificar os dois e
-  // passar a rota para path.resolve(), o destino do build escapa silenciosamente
-  // de dist-guias e o Dockerfile copia um diretório vazio.
+  // Estes dois testes são documentação executável de POR QUE os dois campos
+  // existem — não são, por si só, a guarda contra alguém unificá-los. Se
+  // alguém fizer isso e passar `path.resolve(base, route)` em
+  // build-guias.mjs, os dois `expect` abaixo continuam passando do mesmo
+  // jeito, porque nenhum dos dois chama o código de build. A guarda de
+  // verdade é a checagem de acoplamento em `assertManifest` (`/${output}/`
+  // !== route lança) somada ao regex `OUTPUT`, que juntos impedem que um
+  // manifesto com os campos divergentes ou unificados passe validação.
   it('path.join com output permanece dentro do diretório de destino', () => {
     const base = path.join('/tmp', 'dist-guias')
     expect(path.join(base, 'mara/410C').startsWith(base)).toBe(true)

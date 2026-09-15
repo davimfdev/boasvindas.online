@@ -217,12 +217,26 @@ location ^~ /mara/410C/assets/ {
 }
 
 location ^~ /mara/410C/ {
+    add_header Cache-Control "no-cache, must-revalidate";
     try_files $uri $uri/ /mara/410C/index.html;
 }
 ```
 
 O nginx escolhe o prefixo mais longo que casa, então `/mara/410C/assets/app.js`
 cai no primeiro bloco e todo o resto no segundo. Sem aninhamento e sem regex.
+
+O `Cache-Control: no-cache, must-revalidate` vai no `location ^~ /mara/410C/`
+e não num `location = /mara/410C/index.html` separado: quando o `try_files`
+não acha `$uri` nem `$uri/`, o redirecionamento interno para
+`/mara/410C/index.html` reavalia o casamento de location e cai de volta neste
+mesmo bloco (prefixo mais longo), então é aqui — e só aqui — que o header
+efetivamente é aplicado à resposta.
+
+E, no nível do `server` do subdomínio (uma vez só, não por guia),
+`absolute_redirect off;` — sem isso, o redirect 301 de canonicalização (e
+qualquer redirect automático de diretório que o `try_files` gerar) sai com
+esquema absoluto herdado do socket `listen 80` do container, sempre `http`,
+mesmo quando o pedido original chegou por `https` via Nginx Proxy Manager.
 
 **Canonicalização**, redirect 301 para todas as raízes sem barra final:
 
@@ -486,6 +500,41 @@ GET /webcheckin/assets/nao-existe.js → 404, nunca 200 com HTML
 GET /api/health                → 200
 ```
 
+Só status não bastaria — foi assim que o `Location` em cleartext da revisão
+final chegou a passar verde. O smoke também confere headers:
+
+```
+GET /webcheckin  (sem seguir redirect)
+  → header Location começa com "/", sem esquema nenhum — nunca "http://" e
+    também nunca "https://". É o efeito esperado de `absolute_redirect off`
+    (§3.5): o nginx devolve um alvo relativo e o cliente mantém o esquema com
+    que chegou. Um `Location` absoluto com "https://" aqui indicaria que a
+    diretiva foi removida ou está sem efeito, não que o downgrade foi
+    corrigido — o defeito original também nunca produzia "https://" em texto
+    puro, então a asserção certa é a ausência de esquema, não a presença de
+    "https".
+
+GET /webcheckin/  → header Cache-Control = "no-cache, must-revalidate"
+
+GET /webcheckin/assets/<real>.js
+  → Content-Type: application/javascript
+  → Content-Encoding: gzip
+  → Cache-Control contém "immutable"
+```
+
+O `Content-Type` é `application/javascript`, verificado em 2026-09-15 contra a
+imagem que este projeto usa:
+
+```
+$ docker run --rm nginx:1.29-alpine grep -w js /etc/nginx/mime.types
+    application/javascript                           js;
+```
+
+Confira isso de novo se algum dia a imagem base subir de versão: `gzip_types` é
+lista de casamento exato, então uma troca do `mime.types` para `text/javascript`
+faria o JS deixar de ser comprimido em silêncio, sem erro nenhum. É por isso que
+o `gzip_types` do bloco dos guias lista os dois valores.
+
 E contra `https://boasvindas.online`, confirmando que nada regrediu: `/` responde
 o SPA e `/webcheckin` continua caindo na rota `/:slug` do React Router.
 
@@ -549,3 +598,18 @@ Remover os CPFs exige mover a geração do contrato para o `boasvindas-api`, já
 `AdminPanel.tsx` monta o contrato no cliente a partir desses campos — não é
 ajuste pontual. Decisão registrada em 2026-09-15: a migração segue, com a
 mitigação de §3.8, e a remoção vira a próxima tarefa.
+
+**Endpoint do Google Apps Script sem verificação de origem.**
+`apps/webcheckin/services/externalServices.ts:6` embute a URL do web-app do
+Apps Script. `apps/webcheckin/GOOGLE_APPS_SCRIPT.js` mostra que o `doPost`
+aceita **qualquer** chave do payload, decodifica anexos em base64 e grava cada
+um como arquivo no Google Drive do proprietário, adiciona linha na planilha e
+envia e-mail — sem inspecionar `Origin` nem `Referer`. Qualquer pessoa que
+leia o bundle público (a URL não é segredo, e o `fetch` é `mode: 'no-cors'`,
+então nem precisa disso) consegue encher o Drive e a caixa de entrada do
+proprietário com um `curl` direto, sem passar pelo formulário. Preexistente,
+não introduzido por esta migração, e não bloqueia o merge — mas entra nesta
+lista porque é ela que orienta a próxima tarefa prioritária, e essa tarefa sai
+incompleta se este item não estiver aqui. Corrigir isso significa republicar o
+Apps Script (validar `Origin`/`Referer` no próprio `doPost`, ou trocar o
+mecanismo de autenticação); não há nada a mudar neste repositório.
