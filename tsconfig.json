@@ -15,8 +15,9 @@
     "verbatimModuleSyntax": false,
     "types": ["vite/client", "vitest/globals"],
     "paths": { "@/*": ["./src/*"] },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "allowJs": true
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts"],
+  "include": ["src", "scripts", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts"],
   "exclude": ["node_modules", "dist", "server"]
 }
