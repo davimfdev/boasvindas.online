@@ -4,6 +4,7 @@ node_modules
 # Build output
 dist
 server/dist
+dist-guias
 *.tsbuildinfo
 
 # Env — never commit real values; .env.example is the tracked template
