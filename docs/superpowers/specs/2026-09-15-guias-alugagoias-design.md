@@ -233,10 +233,25 @@ um segundo container para manter.
 Nova rota `server/src/routes/feedback.ts`, montada em `createApp()` como
 `app.use('/api/feedback', feedbackRouter)`.
 
-**Requisição.** `multipart/form-data` com `type`, `name`, `message`, `date` e
-`image` opcional — mesmo contrato que `src/App.tsx:712` já envia, então o
-frontend do guia não muda. `message` e `type` são obrigatórios; `name` vazio vira
-`"Anônimo"`.
+**Requisição.** `multipart/form-data` com os campos que `src/App.tsx:712` já
+envia, então o frontend do guia não muda.
+
+| Campo | Obrigatório | Tratamento |
+|---|---|---|
+| `type` | sim | — |
+| `message` | sim | — |
+| `name` | não | vazio vira `"Anônimo"` |
+| `date` | **não** | ver abaixo |
+| `image` | não | ver abaixo |
+
+**`date` não é fonte de verdade.** O frontend envia
+`new Date().toLocaleString('pt-BR')`, um horário de relógio do hóspede que pode
+estar em qualquer fuso e ser trivialmente forjado. O campo continua sendo aceito
+por compatibilidade, mas é opcional: na ausência dele o backend usa o próprio
+timestamp, formatado em `pt-BR` para manter a coluna da planilha com a mesma
+aparência. **O horário de recebimento no servidor é a referência operacional** —
+se algum dia a planilha precisar auditar quando o feedback chegou, é esse o
+valor a usar, não o do formulário.
 
 **Upload.** `multer.memoryStorage()`, seguindo `routes/media.ts`. O `server.ts`
 original grava em `uploads/` e só remove o arquivo no caminho de sucesso — uma
@@ -252,9 +267,16 @@ A allowlist é a mesma de `media.ts`. O campo se chama `image` e só aceita
 imagem: `.pdf`, `.zip`, `.js` e afins são recusados com 400, não processados por
 vir em multipart.
 
+> **`FEEDBACK_MAX_BYTES` nunca deve exceder o `client_max_body_size` do proxy**,
+> hoje `12m` (§4). Acima disso o Express aceitaria em tese, mas a requisição
+> morre no NPM com um 413 em HTML que nunca chega à aplicação — e o erro no
+> navegador não se parece nada com o problema real. Os 8 MB do padrão deixam
+> margem para o overhead do multipart.
+
 **Destino da imagem.** Vira anexo do e-mail de notificação e **nada mais**. Não é
-persistida em disco, não vai para o Postgres, não gera URL. O Sheets registra
-apenas `"Sim"` ou `"Não"` na coluna correspondente, como hoje.
+persistida em disco, não vai para o Postgres, não gera URL. `filename` é o
+`originalname` do upload, como no original. Se o e-mail não estiver configurado,
+a imagem é descartada sem efeito.
 
 **Google Sheets.** Autenticação com `google-auth-library` e `fetch` direto na API,
 em vez do pacote `googleapis` inteiro (~50 MB para consumir um endpoint).
@@ -262,8 +284,41 @@ em vez do pacote `googleapis` inteiro (~50 MB para consumir um endpoint).
 - Scope: `https://www.googleapis.com/auth/spreadsheets`
 - A chave privada vinda do ambiente passa por `privateKey.replace(/\\n/g, '\n')`
   — no Coolify/Docker ela costuma estar com `\n` escapado.
-- O destino dentro da planilha vem de `GOOGLE_SHEET_RANGE`, padrão `Sheet1!A:E`.
-  `GOOGLE_SHEET_ID` sozinho não determina onde escrever.
+
+Operação, idêntica à de `server.ts:36-44`:
+
+```
+POST spreadsheets.values.append
+spreadsheetId    = GOOGLE_SHEET_ID
+range            = GOOGLE_SHEET_RANGE          (padrão "Sheet1!A:E")
+valueInputOption = "USER_ENTERED"
+values           = [[ date, type, name, message, hasImage ]]
+```
+
+`GOOGLE_SHEET_ID` sozinho não determina onde escrever — daí o `GOOGLE_SHEET_RANGE`.
+`USER_ENTERED` é o que o original usa e **preserva**: o Sheets interpreta a
+string de data como data de verdade, e trocar por `RAW` mudaria o tipo das
+células já existentes na planilha.
+
+`hasImage` grava as strings literais do original: `"Sim (ver email)"` quando há
+anexo, `"Não"` quando não há.
+
+**Nodemailer.** Transporte idêntico ao de `server.ts:49-56`:
+
+```
+service : "gmail"
+auth    : { user: EMAIL_USER, pass: EMAIL_PASS }
+from    : EMAIL_USER
+to      : NOTIFICATION_EMAIL
+subject : `Novo Feedback: ${type}`
+```
+
+O original cai em `wellington.rodovalho@gmail.com` quando `NOTIFICATION_EMAIL`
+não está definido. O fallback é preservado, mas acompanhado de um `warn` no boot
+— um endereço de destino embutido em código é o tipo de coisa que ninguém
+descobre até o dia em que o e-mail deveria ter ido para outro lugar.
+
+Corpo do e-mail em texto puro com `Data`, `Tipo`, `Nome` e `Mensagem`, como hoje.
 
 **Semântica de falha.** As duas integrações são tentadas de forma independente —
 a falha de uma não impede a outra:
@@ -278,9 +333,22 @@ a falha de uma não impede a outra:
 O `200` sem configuração preserva a compatibilidade com o comportamento atual,
 mas o `warn` impede que um erro de configuração em produção pareça sucesso.
 
-**Rate limit.** `feedbackLimiter` próprio em `middleware/rate-limit.ts`, mais
-restrito que os existentes: a rota é pública, gasta e-mail, cota do Google e
-memória. Chaveado por IP — `trust proxy` já está correto (§2.5).
+**Rate limit.** `feedbackLimiter` próprio em `middleware/rate-limit.ts`: a rota é
+pública, sem sessão, e cada requisição gasta e-mail, cota do Google e memória.
+
+```
+windowMs : 15 minutos
+limit    : 10 por IP
+```
+
+Chaveado por IP, com `ipKeyGenerator` como os limiters existentes — `trust proxy`
+já está correto (§2.5). Dez submissões a cada quinze minutos é folgado para um
+hóspede preenchendo um formulário à mão e estreito o bastante para que um script
+não esvazie a cota do Sheets nem transforme a caixa de entrada em alvo.
+
+Montado **antes** do multer, seguindo o raciocínio de `media.ts`: recusar cedo
+impede que uma requisição já fora do limite carregue megabytes de multipart na
+memória antes de ser rejeitada.
 
 **Dependências novas** em `server/`: `google-auth-library` e `nodemailer`.
 
@@ -332,8 +400,10 @@ npm test
 
 `server/src/routes/__tests__/feedback.test.ts`, com supertest e Sheets/transporte
 de e-mail mockados, cobre: sucesso com e sem imagem; campo obrigatório ausente;
-MIME recusado; arquivo acima do limite; falha de uma integração e sucesso da
-outra; falha de ambas; nenhuma integração configurada; rate limit.
+MIME recusado; arquivo acima do limite; `date` ausente caindo no timestamp do
+servidor; `name` vazio virando `"Anônimo"`; a linha enviada ao Sheets na ordem e
+com os literais de §3.7; falha de uma integração e sucesso da outra; falha de
+ambas; nenhuma integração configurada; rate limit disparando na 11ª requisição.
 
 Os guias não têm teste hoje e não ganham suíte nesta entrega — o `build:guias`
 falhando na ausência de `index.html` é a verificação de fumaça deles.
