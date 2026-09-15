@@ -15,10 +15,10 @@ Trazer seis aplicações que hoje vivem em `E:\Dev\Web\Guias&WebCheckin` para
 dentro deste repositório e servi-las em um subdomínio próprio, sem alterar o
 comportamento de `boasvindas.online`.
 
-| Origem | Commit importado | Rota | Integração externa |
+| Origem | Commit importado | Rota | Integração |
 |---|---|---|---|
-| `webcheckin` | `6f75b42` | `/webcheckin/` | Google Apps Script |
-| `Casa-Coimbra-Guia-do-H-spede` | `f8807fe` | `/casacoimbra/` | `POST /api/feedback` |
+| `webcheckin` | `6f75b42` | `/webcheckin/` | Google Apps Script (externa) |
+| `Casa-Coimbra-Guia-do-H-spede` | `f8807fe` | `/casacoimbra/` | `POST /api/feedback` (same-origin) |
 | `boasvindas_mara` | `1e35688` | `/mara/410C/` | nenhuma |
 | `boasvindascrystal` | `fbdd3dd` | `/crystal/1709/` | nenhuma |
 | `Guia-digital-do-H-spede` | `9439d3e` | `/crystal/1701/` | nenhuma |
@@ -151,8 +151,8 @@ exclusivamente com `package.json` e lockfile sincronizados.
 
 ### 3.4 Build dirigido por uma lista declarativa
 
-`scripts/build-guias.mjs` contém a **única** fonte de verdade sobre quais apps
-existem, com quatro campos por entrada:
+`scripts/build-guias.mjs` contém a fonte de verdade **do processo de build e da
+página índice** sobre quais apps existem, com quatro campos por entrada:
 
 | Campo | Uso |
 |---|---|
@@ -165,10 +165,14 @@ Para cada entrada: `npm ci` → `npm run build` → copia `dist/` para
 `dist-guias/<route>`. Falha o processo inteiro se algum `index.html` não for
 produzido.
 
-A página índice de `/` é **gerada a partir dessa mesma lista**, e o `nginx.conf`
-é revisado contra ela a cada etapa. Um app só entra na lista no commit em que é
-vendorizado — é isso que torna cada commit implantável sozinho, sem links
-quebrados e sem o script procurar diretório que ainda não existe.
+A página índice de `/` é **gerada a partir dessa mesma lista**. Um app só entra
+na lista no commit em que é vendorizado — é isso que torna cada commit
+implantável sozinho, sem links quebrados e sem o script procurar diretório que
+ainda não existe.
+
+O `nginx.conf` repete as rotas à mão e é revisado contra a lista a cada etapa.
+Gerar o nginx dinamicamente para seis apps custaria mais do que resolve; o smoke
+de §5.2 pega a divergência.
 
 `npm run build:guias` na raiz invoca o script.
 
@@ -183,22 +187,23 @@ em `127.0.0.1` sem `Host`) continua caindo aqui.
 **2. `server_name alugagoias.boasvindas.online`** — raiz `/usr/share/nginx/guias`.
 Como o NPM repassa `Host: $host`, o casamento por `server_name` funciona.
 
-Um bloco explícito por guia, com o `location` aninhado que impede um asset
-inexistente de virar `index.html` com status 200:
+Dois blocos irmãos por guia — o de assets impede que um arquivo inexistente vire
+`index.html` com status 200:
 
 ```nginx
+location ^~ /mara/410C/assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    try_files $uri =404;
+}
+
 location ^~ /mara/410C/ {
-    location ~ ^/mara/410C/assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files $uri =404;
-    }
     try_files $uri $uri/ /mara/410C/index.html;
 }
 ```
 
-O `location` aninhado é necessário porque `^~` tem precedência sobre regex: uma
-regra de assets no nível do `server` nunca seria avaliada.
+O nginx escolhe o prefixo mais longo que casa, então `/mara/410C/assets/app.js`
+cai no primeiro bloco e todo o resto no segundo. Sem aninhamento e sem regex.
 
 **Canonicalização**, redirect 301 para todas as raízes sem barra final:
 
@@ -244,14 +249,17 @@ envia, então o frontend do guia não muda.
 | `date` | **não** | ver abaixo |
 | `image` | não | ver abaixo |
 
-**`date` não é fonte de verdade.** O frontend envia
-`new Date().toLocaleString('pt-BR')`, um horário de relógio do hóspede que pode
-estar em qualquer fuso e ser trivialmente forjado. O campo continua sendo aceito
-por compatibilidade, mas é opcional: na ausência dele o backend usa o próprio
-timestamp, formatado em `pt-BR` para manter a coluna da planilha com a mesma
-aparência. **O horário de recebimento no servidor é a referência operacional** —
-se algum dia a planilha precisar auditar quando o feedback chegou, é esse o
-valor a usar, não o do formulário.
+**`date` continua alimentando a planilha, por compatibilidade com o
+comportamento atual.** Quando presente, é o valor do cliente que vai para a
+primeira coluna — o frontend envia `new Date().toLocaleString('pt-BR')`, um
+relógio do hóspede que pode estar em qualquer fuso e ser trivialmente forjado.
+**Não deve ser tratado como timestamp confiável.** Quando ausente, o backend usa
+o próprio timestamp formatado em `pt-BR`, para manter a coluna com a mesma
+aparência.
+
+Esta entrega **não** adiciona persistência separada do horário de recebimento no
+servidor. Registrar um timestamp confiável exigiria uma coluna nova na planilha e
+fica para quem precisar auditar quando o feedback chegou.
 
 **Upload.** `multer.memoryStorage()`, seguindo `routes/media.ts`. O `server.ts`
 original grava em `uploads/` e só remove o arquivo no caminho de sucesso — uma
@@ -478,9 +486,9 @@ Achados **preexistentes** no `webcheckin`, que já valem para o deploy atual e n
 são introduzidos por esta mudança. Não bloqueiam tecnicamente a migração, mas são
 débitos prioritários — não notas de rodapé.
 
-**Senha embutida no bundle.** `components/AdminPanel.tsx:168` traz
-`[senha removida]` em texto puro, legível por qualquer visitante. Deve
-ser considerada **pública e comprometida**. Não é um mecanismo de autenticação e
+**Senha embutida no bundle.** `components/AdminPanel.tsx:168` contém uma senha
+mestra hard-coded em texto puro, legível por qualquer visitante. Deve ser
+considerada **pública e comprometida**. Não é um mecanismo de autenticação e
 não deve ser tratada como tal, nem reutilizada em nenhum outro sistema. A
 verificação acontece inteiramente no cliente, então o painel é acessível a quem
 souber ler o bundle, com ou sem a senha.
