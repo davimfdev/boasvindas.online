@@ -21,11 +21,21 @@ COPY src ./src
 COPY public ./public
 RUN npm run build
 
+# Guias e web check-in: cada um é um projeto Vite independente, com seu próprio
+# lockfile. scripts/build-guias.mjs usa apenas builtins do Node, então este
+# estágio não instala nada na raiz.
+FROM node:22-alpine AS build-guias
+WORKDIR /app
+COPY scripts ./scripts
+COPY apps ./apps
+RUN node scripts/build-guias.mjs
+
 FROM nginx:1.29-alpine AS runtime
 
 # SPA fallback, asset caching and gzip. Replaces the stock default server block.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build-guias /app/dist-guias /usr/share/nginx/guias
 
 EXPOSE 80
 

@@ -25,7 +25,16 @@ Turborepo, sem workspaces, sem tooling compartilhado. Cada um tem seu
 |---|---|---|---|
 | `boasvindas-site` | `/` (raiz) | SPA React 19 + Vite 8, saída estática em `/dist`, servida por nginx | 80 |
 | `boasvindas-api` | `/server` | API Express 5 + TypeScript ESM | 3000 |
+| `guias` | `/apps` | Seis projetos Vite independentes, servidos por `boasvindas-site` em `alugagoias.boasvindas.online` | 80 |
 | `app-postgres` | — | PostgreSQL existente na VPS, **não gerenciado por este projeto** | 5432 (interno) |
+
+Os guias **não** são um workspace: cada um tem seu `package.json` e seu
+lockfile, e `scripts/build-guias.mjs` os builda em sequência a partir do
+manifesto em `scripts/guias-manifest.mjs`. O mesmo container serve os dois
+hosts, separados por `server_name` no `nginx.conf`.
+
+Em 2026-09-15 apenas o `webcheckin` está vendorizado. Ver
+`docs/superpowers/specs/2026-09-15-guias-alugagoias-design.md`.
 
 ```
                           Internet
