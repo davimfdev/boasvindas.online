@@ -152,18 +152,37 @@ exclusivamente com `package.json` e lockfile sincronizados.
 ### 3.4 Build dirigido por uma lista declarativa
 
 `scripts/build-guias.mjs` contém a fonte de verdade **do processo de build e da
-página índice** sobre quais apps existem, com quatro campos por entrada:
+página índice** sobre quais apps existem, com cinco campos por entrada:
 
 | Campo | Uso |
 |---|---|
 | `dir` | pasta em `apps/` |
-| `route` | caminho servido, com barra final |
+| `route` | **somente URL** — caminho servido, com barra inicial e final |
+| `output` | **somente filesystem** — caminho relativo, sem barra inicial nem final |
 | `title` | nome exibido na página índice |
 | `listed` | se aparece na página índice |
 
+```js
+{
+  dir:    'mara-410c',
+  route:  '/mara/410C/',
+  output: 'mara/410C',
+  title:  'Mara 410C',
+  listed: true,
+}
+```
+
+**`route` e `output` nunca se substituem.** `route` alimenta o `base` do Vite e os
+links da página índice; `output` alimenta exclusivamente `path.join()`. A
+separação existe porque `route` começa com `/`: passado a `path.resolve()` ele é
+tratado como caminho absoluto e **descarta o diretório de destino** —
+`path.resolve('dist-guias', '/mara/410C/')` não aponta para dentro de
+`dist-guias`. Com um campo próprio, nenhuma implementação precisa de
+`replace(/^\/|\/$/g, '')` espalhado pelo script para consertar isso.
+
 Para cada entrada: `npm ci` → `npm run build` → copia `dist/` para
-`dist-guias/<route>`. Falha o processo inteiro se algum `index.html` não for
-produzido.
+`path.join(distGuias, app.output)`. Falha o processo inteiro se algum
+`index.html` não for produzido.
 
 A página índice de `/` é **gerada a partir dessa mesma lista**. Um app só entra
 na lista no commit em que é vendorizado — é isso que torna cada commit
@@ -275,6 +294,11 @@ A allowlist é a mesma de `media.ts`. O campo se chama `image` e só aceita
 imagem: `.pdf`, `.zip`, `.js` e afins são recusados com 400, não processados por
 vir em multipart.
 
+A allowlist é **validação de contrato, não inspeção do conteúdo binário** — o
+MIME de multipart é autodeclarado pelo cliente. Verificação por magic bytes fica
+fora desta entrega: o arquivo não é executado, não é persistido e não é
+publicado, só vira anexo de e-mail.
+
 > **`FEEDBACK_MAX_BYTES` nunca deve exceder o `client_max_body_size` do proxy**,
 > hoje `12m` (§4). Acima disso o Express aceitaria em tese, mas a requisição
 > morre no NPM com um 413 em HTML que nunca chega à aplicação — e o erro no
@@ -310,6 +334,25 @@ células já existentes na planilha.
 
 `hasImage` grava as strings literais do original: `"Sim (ver email)"` quando há
 anexo, `"Não"` quando não há.
+
+**Proteção contra formula injection.** `USER_ENTERED` é preservado para manter o
+tratamento da coluna de data, mas ele é exatamente o que faz o Sheets **avaliar**
+o que recebe. O endpoint é público e sem autenticação: não adianta confiar no
+formulário, porque qualquer um faz `POST /api/feedback` à mão com
+`message==IMPORTXML(...)`.
+
+Todo valor textual controlado pelo cliente — `type`, `name`, `message` e `date`
+quando fornecido — é neutralizado antes do envio: se começar com `=`, `+`, `-`
+ou `@`, recebe o prefixo `'`, que faz o Sheets armazenar como texto. O
+apóstrofo não aparece na célula, então um feedback que legitimamente comece com
+`-` continua sendo exibido como o hóspede escreveu.
+
+`hasImage` é produzido exclusivamente pelo servidor e não passa por essa
+sanitização.
+
+Uma `date` legítima (`"15/09/2026 21:41:07"`) não começa com nenhum desses
+caracteres, então continua chegando ao Sheets como data — a sanitização só toca
+nela num valor forjado, que é justamente o caso em que deve virar texto.
 
 **Nodemailer.** Transporte idêntico ao de `server.ts:49-56`:
 
@@ -412,6 +455,10 @@ MIME recusado; arquivo acima do limite; `date` ausente caindo no timestamp do
 servidor; `name` vazio virando `"Anônimo"`; a linha enviada ao Sheets na ordem e
 com os literais de §3.7; falha de uma integração e sucesso da outra; falha de
 ambas; nenhuma integração configurada; rate limit disparando na 11ª requisição.
+
+Formula injection, um caso por campo sanitizado: `message`, `name`, `type` e
+`date` começando com `=`, `+`, `-` e `@` chegam ao Sheets prefixados com `'`, e
+um valor legítimo que não comece com esses caracteres chega intacto.
 
 Os guias não têm teste hoje e não ganham suíte nesta entrega — o `build:guias`
 falhando na ausência de `index.html` é a verificação de fumaça deles.
