@@ -6,6 +6,44 @@
 
 const EMAIL_DESTINATARIO = "wellington.rodovalho@gmail.com";
 
+/**
+ * Colunas cujo conteúdo é identificador, não número.
+ *
+ * As bordas \b importam: sem elas, /rg/i casaria o "rg" de "Emergência" e
+ * arrastaria colunas que não têm nada a ver.
+ */
+var COLUNA_DE_IDENTIFICADOR = /\bCPF\b|\bRG\b|\bCEP\b|Telefone|Placa/i;
+
+/** Só dígitos e começando com zero — "00991055195", "01310100". */
+var ZERO_A_ESQUERDA = /^0\d+$/;
+
+/**
+ * Impede que o Sheets reinterprete identificadores na hora de gravar.
+ *
+ * appendRow se comporta como alguém digitando na célula: "00991055195" vira o
+ * número 991055195 e o CPF perde dois dígitos. Como esta planilha alimenta o
+ * AutoCrat, o valor truncado acaba dentro de um contrato de locação assinado.
+ *
+ * Duas regras, e de propósito nenhuma delas é uma lista de campos — a lista
+ * quebraria no dia em que alguém acrescentasse "Acompanhante 8 CPF":
+ *
+ *   1. a coluna é de identificador, e aí vira texto sempre, para a coluna
+ *      inteira ter um tipo só;
+ *   2. ou o valor é só dígitos e começa com zero, que é sempre identificador
+ *      e nunca quantidade.
+ *
+ * O apóstrofo é a marca de texto do Sheets: ele não aparece para quem lê a
+ * célula nem para o AutoCrat.
+ */
+function preservarComoTexto(cabecalho, valor) {
+  if (typeof valor !== 'string' || valor === '') return valor;
+  if (valor.charAt(0) === "'") return valor;
+  if (COLUNA_DE_IDENTIFICADOR.test(cabecalho) || ZERO_A_ESQUERDA.test(valor)) {
+    return "'" + valor;
+  }
+  return valor;
+}
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(30000); 
@@ -101,7 +139,7 @@ function doPost(e) {
       if (h === "Destinatario_Email" || h === "Assunto_Email" || h === "Corpo_Email" || h === "PDF_Nome" || h === "Guest_Email" || h === "Guest_Name" || h === "Property_Name" || h === "Welcome_Link") {
         return "";
       }
-      return data[h] || "";
+      return preservarComoTexto(h, data[h] || "");
     });
 
     // Adiciona a linha de dados
